@@ -445,6 +445,7 @@ MIDDLEWARE = [
     'pretix.multidomain.middlewares.MultiDomainMiddleware',
     'pretix.base.middleware.CustomCommonMiddleware',
     'pretix.multidomain.middlewares.SessionMiddleware',
+    'pretix.multidomain.middlewares.SocialDancingSsoMiddleware',
     'pretix.multidomain.middlewares.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

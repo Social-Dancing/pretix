@@ -39,20 +39,26 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 from pretix.base.models import User
+from pretix.base.auth import (
+    get_sso_session_cookie_key,
+    get_sso_session,
+)
 from pretix.control.views.auth import process_login
 from django.contrib.sessions.middleware import (
     SessionMiddleware as BaseSessionMiddleware,
 )
+from django.contrib.auth import (
+    logout as auth_logout,
+)
 from django.core.cache import cache
 from django.core.exceptions import DisallowedHost, ImproperlyConfigured
 from django.http.request import split_domain_port
-from django.http import HttpResponseRedirect
 from django.middleware.csrf import (
     CSRF_SESSION_KEY, CSRF_TOKEN_LENGTH,
     CsrfViewMiddleware as BaseCsrfMiddleware, _check_token_format,
     _unmask_cipher_token,
 )
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import set_urlconf
 from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
@@ -64,6 +70,7 @@ from pretix.helpers.cookies import set_cookie_without_samesite
 from pretix.helpers.security import assert_session_valid
 from pretix.multidomain.models import KnownDomain
 
+LOCAL_HOST_NAMES = ("testserver", "localhost")
 logger = logging.getLogger(__name__)
 
 
@@ -202,31 +209,27 @@ class SessionMiddleware(BaseSessionMiddleware):
                         )
         return response
 
+
 class SocialDancingSsoMiddleware(BaseSessionMiddleware):
-    def validate_sso_session(self, request, token):
+    def _validate_pretix_session(self, request):
         """
-        Validate the SSO session token by communicating with the Social Dancing server.
-        Returns user data if the session is valid, otherwise None.
+        Checks if the Pretix session is valid.
         """
         try:
-            is_secure = request.scheme == "https"
-            cookie_key = (
-                "__Secure-next-auth.session-token"
-                if is_secure
-                else "next-auth.session-token"
-            )
-            response = requests.get(
-                f"{settings.PRETIX_CORE_SYSTEM_URL}/api/auth/session",
-                cookies={cookie_key: token},
-            )
-
-            if response.status_code == 200:
-                return response.json()
-            else:
-                return None
+            return assert_session_valid(request)
         except Exception as e:
-            logger.error(f"Failed to validate SSO session token: {e}")
-            return None
+            logger.warn(f"Invalid Pretix session found: {e}")
+            return False
+
+    def _handle_invalid_session(self, request, is_pretix_session_valid):
+        """
+        Handles invalid session by logging out and redirecting to the sign-in page.
+        """
+        redirect_url = f"{settings.PRETIX_CORE_SYSTEM_URL}/signin"
+        if is_pretix_session_valid:
+            auth_logout(request)
+            request.session["pretix_auth_login_time"] = 0
+        return redirect(redirect_url)
 
     def process_request(self, request):
         """
@@ -237,36 +240,34 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         if not request.path.startswith("/control"):
             return None
 
-        sd_token = request.COOKIES.get("next-auth.session-token")
-        redirect_url = f"{settings.PRETIX_CORE_SYSTEM_URL}/signin"
+        is_pretix_session_valid = self._validate_pretix_session(request)
+        cookie_key = get_sso_session_cookie_key(request)
+        sd_token = request.COOKIES.get(cookie_key)
 
         if not sd_token:
-            return HttpResponseRedirect(redirect_url)
+            return self._handle_invalid_session(request, is_pretix_session_valid)
 
-        user_data = self.validate_sso_session(request, sd_token)
-        if not user_data:
-            return HttpResponseRedirect(redirect_url)
+        sd_session_data = get_sso_session(request)
+        if not sd_session_data:
+            return self._handle_invalid_session(request, is_pretix_session_valid)
 
         # Assumes that the user's email address is consistent between Social
         # Dancing and Pretix. This synchronization is critical for correctly
         # identifying and authenticating the user across both systems.
-        email = user_data.get("user", {}).get("email")
+        email = sd_session_data.get("user", {}).get("email")
         if not email:
-            return HttpResponseRedirect(redirect_url)
+            return self._handle_invalid_session(request, is_pretix_session_valid)
 
         try:
             user = User.objects.get(email=email)
             request.user = user
 
-            try:
-                assert_session_valid(request)
-            except Exception as e:
-                logger.error(f"Invalid Pretix session found: {e}")
+            if not is_pretix_session_valid:
                 process_login(request, user, True)
 
         except User.DoesNotExist:
-            logger.error(f"User not found: {e}")
-            return HttpResponseRedirect(redirect_url)
+            logger.error(f"User with email {email} not found")
+            return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/signin")
 
 
 class CsrfViewMiddleware(BaseCsrfMiddleware):

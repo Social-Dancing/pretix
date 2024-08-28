@@ -32,6 +32,8 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under the License.
 
+import requests
+import logging
 from collections import OrderedDict
 from importlib import import_module
 
@@ -39,6 +41,8 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
+
+logger = logging.getLogger(__name__)
 
 
 def get_auth_backends():
@@ -48,6 +52,35 @@ def get_auth_backends():
         b = getattr(import_module(mod), name)()
         backends[b.identifier] = b
     return backends
+
+
+def get_sso_session_cookie_key(request):
+    is_secure = request.scheme == "https"
+    return (
+        "__Secure-next-auth.session-token" if is_secure else "next-auth.session-token"
+    )
+
+
+def get_sso_session(request):
+    """
+    Validate the SSO session token by communicating with the Social Dancing
+    server. Returns user data if the session is valid, otherwise None.
+    """
+    try:
+        cookie_key = get_sso_session_cookie_key(request)
+        token = request.COOKIES.get(cookie_key)
+        response = requests.get(
+            f"{settings.PRETIX_CORE_SYSTEM_URL}/api/auth/session",
+            cookies={cookie_key: token},
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+    except Exception as e:
+        logger.error(f"Failed to validate SSO session token: {e}")
+        return None
 
 
 class BaseAuthBackend:

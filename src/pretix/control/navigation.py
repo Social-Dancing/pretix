@@ -387,16 +387,6 @@ def get_global_navigation(request):
                     'active': 'user.settings.notifications' == url.url_name,
                 },
                 {
-                    'label': _('2FA'),
-                    'url': reverse('control:user.settings.2fa'),
-                    'active': 'user.settings.2fa' in url.url_name,
-                },
-                {
-                    'label': _('Authorized apps'),
-                    'url': reverse('control:user.settings.oauth.list'),
-                    'active': 'user.settings.oauth' in url.url_name,
-                },
-                {
                     'label': _('Account history'),
                     'url': reverse('control:user.settings.history'),
                     'active': 'user.settings.history' in url.url_name,

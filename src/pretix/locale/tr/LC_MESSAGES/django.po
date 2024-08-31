@@ -25574,9 +25574,9 @@ msgstr "QR kod tarayıcısına yönlendirmek"
 msgid "Other QR code"
 msgstr "Sipariş kodu"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "pretix Logosu"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "Social Dancing Logosu"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

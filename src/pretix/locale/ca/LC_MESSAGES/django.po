@@ -24376,8 +24376,8 @@ msgstr ""
 msgid "Other QR code"
 msgstr "Codi de comanda"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
 msgstr ""
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503

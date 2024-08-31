@@ -600,9 +600,9 @@ msgstr "Zone de code-barres"
 msgid "Image area"
 msgstr "Zone d'image"
 
-#: pretix/static/pretixcontrol/js/ui/editor.js:907
-msgid "Powered by pretix"
-msgstr "Propulsé par pretix"
+#: pretix/static/pretixcontrol/js/ui/editor.js:667
+msgid "Powered by Social Dancing"
+msgstr "Propulsé par Social Dancing"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:909
 msgid "Object"

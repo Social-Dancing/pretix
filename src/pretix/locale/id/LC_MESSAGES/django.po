@@ -24134,9 +24134,9 @@ msgstr "Kode QR untuk Pemindaian Timbal"
 msgid "Other QR code"
 msgstr "Kode QR lainnya"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "Logo awalan"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr ""
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

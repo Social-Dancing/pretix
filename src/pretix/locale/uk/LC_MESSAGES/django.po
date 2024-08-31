@@ -24186,9 +24186,9 @@ msgstr "QR-код для Сканування відвідувачів"
 msgid "Other QR code"
 msgstr "Інший QR код"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "лого pretix"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "лого Social Dancing"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

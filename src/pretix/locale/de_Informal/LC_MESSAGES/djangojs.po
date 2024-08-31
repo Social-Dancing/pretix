@@ -588,9 +588,9 @@ msgstr "QR-Code-Bereich"
 msgid "Image area"
 msgstr "Bildbereich"
 
-#: pretix/static/pretixcontrol/js/ui/editor.js:907
-msgid "Powered by pretix"
-msgstr "Event-Ticketshop von pretix"
+#: pretix/static/pretixcontrol/js/ui/editor.js:667
+msgid "Powered by Social Dancing"
+msgstr "Event-Ticketshop von Social Dancing"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:909
 msgid "Object"

@@ -618,9 +618,9 @@ msgstr "QR-kode-område"
 msgid "Image area"
 msgstr "QR-kode-område"
 
-#: pretix/static/pretixcontrol/js/ui/editor.js:907
-msgid "Powered by pretix"
-msgstr "Drevet af pretix"
+#: pretix/static/pretixcontrol/js/ui/editor.js:667
+msgid "Powered by Social Dancing"
+msgstr "Drevet af Social Dancing"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:909
 msgid "Object"

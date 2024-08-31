@@ -24519,9 +24519,9 @@ msgstr "QR escaneo prospecto"
 msgid "Other QR code"
 msgstr "Otro código QR"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "Logotipo pretix"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "Logotipo Social Dancing"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

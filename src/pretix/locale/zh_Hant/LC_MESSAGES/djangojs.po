@@ -586,9 +586,9 @@ msgstr "二維條碼區域"
 msgid "Image area"
 msgstr "圖片區域"
 
-#: pretix/static/pretixcontrol/js/ui/editor.js:907
-msgid "Powered by pretix"
-msgstr "pretix 驅動"
+#: pretix/static/pretixcontrol/js/ui/editor.js:667
+msgid "Powered by Social Dancing"
+msgstr "Social Dancing 驅動"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:909
 msgid "Object"

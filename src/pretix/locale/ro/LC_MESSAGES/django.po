@@ -24904,9 +24904,9 @@ msgstr "Cod QR pentru Scanare lead-uri"
 msgid "Other QR code"
 msgstr "Alt cod QR"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "pretix Logo"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "Social Dancing Logo"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

@@ -520,7 +520,7 @@ def get_organizer_navigation(request):
             ]
         })
 
-    if 'can_change_teams' in request.orgapermset:
+    if 'is_staff' in request.orgapermset:
         nav.append({
             'label': _('Teams'),
             'url': reverse('control:organizer.teams', kwargs={

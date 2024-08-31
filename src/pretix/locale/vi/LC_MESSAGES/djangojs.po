@@ -582,9 +582,9 @@ msgstr "Vùng mã vạch"
 msgid "Image area"
 msgstr "Vùng ảnh"
 
-#: pretix/static/pretixcontrol/js/ui/editor.js:907
-msgid "Powered by pretix"
-msgstr "Được cung cấp bởi pretix"
+#: pretix/static/pretixcontrol/js/ui/editor.js:667
+msgid "Powered by Social Dancing"
+msgstr "Được cung cấp bởi Social Dancing"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:909
 msgid "Object"

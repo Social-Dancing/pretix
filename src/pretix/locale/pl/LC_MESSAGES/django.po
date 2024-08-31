@@ -23980,9 +23980,9 @@ msgstr "Kod QR dla skanowania leadów"
 msgid "Other QR code"
 msgstr "Inny kod QR"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "Logo pretix"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "Logo Social Dancing"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

@@ -570,8 +570,8 @@ msgstr ""
 msgid "Image area"
 msgstr ""
 
-#: pretix/static/pretixcontrol/js/ui/editor.js:907
-msgid "Powered by pretix"
+#: pretix/static/pretixcontrol/js/ui/editor.js:667
+msgid "Powered by Social Dancing"
 msgstr ""
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:909

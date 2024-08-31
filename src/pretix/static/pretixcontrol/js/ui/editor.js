@@ -904,7 +904,7 @@ var editor = {
             } else if (o.type === "imagearea") {
                 $("#toolbox-heading").text(gettext("Image area"));
             } else if (o.type === "poweredby") {
-                $("#toolbox-heading").text(gettext("Powered by pretix"));
+                $("#toolbox-heading").text(gettext("Powered by Social Dancing"));
             } else {
                 $("#toolbox-heading").text(gettext("Object"));
             }
@@ -955,8 +955,8 @@ var editor = {
         var rect = new fabric.Poweredby({
             left: 100,
             top: 100,
-            height: 629,
-            width: 1024,
+            height: 406,
+            width: 1989,
             lockRotation: true,
             content: content
         });

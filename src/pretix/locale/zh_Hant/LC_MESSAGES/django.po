@@ -22893,9 +22893,9 @@ msgstr "用於鉛掃描的二維碼"
 msgid "Other QR code"
 msgstr "其他二維碼"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "pretix 商標"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "Social Dancing 商標"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

@@ -24275,9 +24275,9 @@ msgstr "QR-kode for skanning av leads"
 msgid "Other QR code"
 msgstr "Ordrekode"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "pretix-logo"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "Social Dancing logo"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

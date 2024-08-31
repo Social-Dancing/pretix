@@ -23926,9 +23926,9 @@ msgstr "QR-kod för leadskanning"
 msgid "Other QR code"
 msgstr "Annan QR-kod"
 
-#: pretix/control/templates/pretixcontrol/pdf/index.html:500
-msgid "pretix Logo"
-msgstr "pretix-logotyp"
+#: pretix/control/templates/pretixcontrol/pdf/index.html:450
+msgid "Social Dancing Logo"
+msgstr "Social Dancing-logotyp"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:503
 msgid ""

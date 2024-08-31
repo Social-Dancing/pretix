@@ -596,9 +596,9 @@ msgstr "Oblast s QR kódem"
 msgid "Image area"
 msgstr "Oblast obrazu"
 
-#: pretix/static/pretixcontrol/js/ui/editor.js:907
-msgid "Powered by pretix"
-msgstr "Poháněno společností pretix"
+#: pretix/static/pretixcontrol/js/ui/editor.js:667
+msgid "Powered by Social Dancing"
+msgstr "Poháněno společností Social Dancing"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:909
 msgid "Object"

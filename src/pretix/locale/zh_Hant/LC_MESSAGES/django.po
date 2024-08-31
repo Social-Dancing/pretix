@@ -22826,8 +22826,8 @@ msgid "Other QR code"
 msgstr "其他二維碼"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:450
-msgid "pretix Logo"
-msgstr "pretix 商標"
+msgid "Social Dancing Logo"
+msgstr "Social Dancing 商標"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:453
 msgid ""

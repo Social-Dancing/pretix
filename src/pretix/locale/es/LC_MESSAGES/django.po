@@ -24453,8 +24453,8 @@ msgid "Other QR code"
 msgstr "Otro código QR"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:450
-msgid "pretix Logo"
-msgstr "Logotipo pretix"
+msgid "Social Dancing Logo"
+msgstr "Logotipo Social Dancing"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:453
 msgid ""

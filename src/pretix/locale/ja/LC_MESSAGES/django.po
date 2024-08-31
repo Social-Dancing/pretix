@@ -21597,7 +21597,7 @@ msgid "Other QR code"
 msgstr "注文番号"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:450
-msgid "pretix Logo"
+msgid "Social Dancing Logo"
 msgstr ""
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:453

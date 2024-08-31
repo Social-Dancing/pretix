@@ -584,8 +584,8 @@ msgid "Image area"
 msgstr "Obszar obrazu"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:667
-msgid "Powered by pretix"
-msgstr "Wygenerowane przez pretix"
+msgid "Powered by Social Dancing"
+msgstr "Wygenerowane przez Social Dancing"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:669
 msgid "Object"

@@ -25565,8 +25565,8 @@ msgstr "Código do pedido"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:450
 #, fuzzy
-msgid "pretix Logo"
-msgstr "Logotipo pretix"
+msgid "Social Dancing Logo"
+msgstr "Logotipo Social Dancing"
 
 #: pretix/control/templates/pretixcontrol/pdf/index.html:453
 msgid ""

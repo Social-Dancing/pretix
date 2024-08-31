@@ -594,8 +594,8 @@ msgid "Image area"
 msgstr "画像エリア"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:667
-msgid "Powered by pretix"
-msgstr "Pretixのイベントチケット売り場"
+msgid "Powered by Social Dancing"
+msgstr "Social Dancingのイベントチケット売り場"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:669
 msgid "Object"

@@ -622,8 +622,8 @@ msgid "Image area"
 msgstr "Barkod alanı"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:667
-msgid "Powered by pretix"
-msgstr "Pretix tarafından desteklenmektedir"
+msgid "Powered by Social Dancing"
+msgstr "Social Dancing tarafından desteklenmektedir"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:669
 msgid "Object"

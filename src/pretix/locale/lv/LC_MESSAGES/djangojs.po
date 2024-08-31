@@ -596,8 +596,8 @@ msgid "Image area"
 msgstr "Attēla lauks"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:667
-msgid "Powered by pretix"
-msgstr "Pretix atbalstīts"
+msgid "Powered by Social Dancing"
+msgstr "Social Dancing atbalstīts"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:669
 msgid "Object"

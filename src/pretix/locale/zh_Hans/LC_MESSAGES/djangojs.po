@@ -592,8 +592,8 @@ msgid "Image area"
 msgstr "条码区"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:667
-msgid "Powered by pretix"
-msgstr "由pretix驱动"
+msgid "Powered by Social Dancing"
+msgstr "由Social Dancing驱动"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:669
 msgid "Object"

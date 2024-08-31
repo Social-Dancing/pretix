@@ -623,8 +623,8 @@ msgid "Image area"
 msgstr "Área de código de barras"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:667
-msgid "Powered by pretix"
-msgstr "Distribuído por pretix"
+msgid "Powered by Social Dancing"
+msgstr "Distribuído por Social Dancing"
 
 #: pretix/static/pretixcontrol/js/ui/editor.js:669
 msgid "Object"

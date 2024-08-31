@@ -42,7 +42,8 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.utils.timezone import now
 from django_countries.fields import Country
-from django_scopes import scopes_disabled
+from django_scopes import scope, scopes_disabled
+from tests import assert_num_queries
 from tests.const import SAMPLE_PNG
 
 from pretix.base.models import (
@@ -999,6 +1000,10 @@ def seatingplan(event, organizer, item):
 
 @pytest.mark.django_db
 def test_event_update_seating(token_client, organizer, event, item, seatingplan):
+    resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/'.format(organizer.slug, event.slug))
+    assert resp.status_code == 200
+    assert len(resp.data['results']) == 0
+
     resp = token_client.patch(
         '/api/v1/organizers/{}/events/{}/'.format(organizer.slug, event.slug),
         {
@@ -1018,6 +1023,11 @@ def test_event_update_seating(token_client, organizer, event, item, seatingplan)
         m = event.seat_category_mappings.get()
     assert m.layout_category == 'Stalls'
     assert m.product == item
+
+    resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/'.format(organizer.slug, event.slug))
+    assert resp.status_code == 200
+    assert len(resp.data['results']) == 3
+    assert all(seat['product'] == item.pk for seat in resp.data['results'])
 
 
 @pytest.mark.django_db
@@ -1530,3 +1540,106 @@ def test_patch_event_settings_file(token_client, organizer, event):
     )
     assert resp.status_code == 200
     assert resp.data['logo_image'] is None
+
+
+@pytest.mark.django_db
+def test_event_block_unblock_seat(token_client, organizer, event, seatingplan, item):
+    resp = token_client.patch(
+        '/api/v1/organizers/{}/events/{}/'.format(organizer.slug, event.slug),
+        {
+            "seating_plan": seatingplan.pk,
+            "seat_category_mapping": {
+                "Stalls": item.pk
+            }
+        },
+        format='json'
+    )
+    assert resp.status_code == 200
+    event.refresh_from_db()
+
+    resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/'.format(organizer.slug, event.slug))
+    assert resp.status_code == 200
+
+    seat_id = resp.data['results'][0]['id']
+    resp = token_client.patch(
+        '/api/v1/organizers/{}/events/{}/seats/{}/'.format(organizer.slug, event.slug, seat_id),
+        {
+            "blocked": True,
+        },
+        format='json'
+    )
+    assert resp.status_code == 200
+    assert resp.data['blocked'] is True
+
+    resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/{}/'
+                            '?expand=orderposition&expand=cartposition&expand=voucher'
+                            .format(organizer.slug, event.slug, seat_id))
+    assert resp.status_code == 200
+    assert resp.data['blocked'] is True
+
+    resp = token_client.patch(
+        '/api/v1/organizers/{}/events/{}/seats/{}/'.format(organizer.slug, event.slug, seat_id),
+        {
+            "blocked": False,
+        },
+        format='json'
+    )
+    assert resp.status_code == 200
+    assert resp.data['blocked'] is False
+
+
+@pytest.mark.django_db
+def test_event_expand_seat_filter_and_querycount(token_client, organizer, event, seatingplan, item):
+    event.settings.seating_minimal_distance = 2
+
+    resp = token_client.patch(
+        '/api/v1/organizers/{}/events/{}/'.format(organizer.slug, event.slug),
+        {
+            "seating_plan": seatingplan.pk,
+            "seat_category_mapping": {
+                "Stalls": item.pk
+            }
+        },
+        format='json'
+    )
+    assert resp.status_code == 200
+    event.refresh_from_db()
+
+    with assert_num_queries(12):
+        resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/'
+                                '?expand=orderposition&expand=cartposition&expand=voucher&is_available=true'
+                                .format(organizer.slug, event.slug))
+        assert resp.status_code == 200
+        assert len(resp.data['results']) == 3
+
+    with scope(organizer=organizer):
+        v0 = event.vouchers.create(item=item, seat=event.seats.get(seat_guid='0-0'))
+
+    with assert_num_queries(13):
+        resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/'
+                                '?expand=orderposition&expand=cartposition&expand=voucher&is_available=false'
+                                .format(organizer.slug, event.slug))
+        assert resp.status_code == 200
+        assert len(resp.data['results']) == 1
+        assert resp.data['results'][0]['voucher']['id'] == v0.pk
+
+    with assert_num_queries(12):
+        resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/'
+                                '?expand=orderposition&expand=cartposition&expand=voucher&is_available=true'
+                                .format(organizer.slug, event.slug))
+        assert resp.status_code == 200
+        assert len(resp.data['results']) == 2
+
+    with scope(organizer=organizer):
+        v1 = event.vouchers.create(item=item, seat=event.seats.get(seat_guid='0-1'))
+        v2 = event.vouchers.create(item=item, seat=event.seats.get(seat_guid='0-2'))
+
+    with assert_num_queries(13):
+        resp = token_client.get('/api/v1/organizers/{}/events/{}/seats/'
+                                '?expand=orderposition&expand=cartposition&expand=voucher&is_available=false'
+                                .format(organizer.slug, event.slug))
+        assert resp.status_code == 200
+        assert len(resp.data['results']) == 3
+        assert resp.data['results'][0]['voucher']['id'] == v0.pk
+        assert resp.data['results'][1]['voucher']['id'] == v1.pk
+        assert resp.data['results'][2]['voucher']['id'] == v2.pk

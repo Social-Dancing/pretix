@@ -33,12 +33,14 @@
 # License for the specific language governing permissions and limitations under the License.
 
 import time
+import re
 import requests
 import logging
 from urllib.parse import urlparse
 
 from django.conf import settings
-from pretix.base.models import User
+from django.utils.translation import gettext_lazy as _
+from pretix.base.models import User, Team, Organizer
 from pretix.base.auth import (
     get_sso_session_cookie_key,
     get_sso_session,
@@ -216,6 +218,10 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         Checks if the Pretix session is valid.
         """
         try:
+            # Return early to avoid errors from a missing 'user' attribute
+            # (e.g., "'WSGIRequest' object has no attribute 'user'").
+            if not hasattr(request, "user"):
+                return False
             return assert_session_valid(request)
         except Exception as e:
             logger.warn(f"Invalid Pretix session found: {e}")
@@ -230,6 +236,72 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
             auth_logout(request)
             request.session["pretix_auth_login_time"] = 0
         return redirect(redirect_url)
+
+    def _slugify_string(self, input_string):
+        # Remove special characters (keeping only alphanumeric characters and spaces).
+        cleaned_string = re.sub(r"[^a-zA-Z0-9\s]", "", input_string)
+        # Replace spaces with hyphens.
+        hyphenated_string = re.sub(r"\s+", "-", cleaned_string)
+        lowercased_string = hyphenated_string.lower()
+
+        return lowercased_string
+
+    def _handle_new_user(self, request, session_data):
+        is_organization_profile_complete = session_data.get("organization", {}).get(
+            "isProfileComplete"
+        )
+        email = session_data.get("user", {}).get("email")
+        if not is_organization_profile_complete:
+            return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
+
+        try:
+            cookie_key = get_sso_session_cookie_key(request)
+            token = request.COOKIES.get(cookie_key)
+            response = requests.get(
+                f"{settings.PRETIX_CORE_SYSTEM_URL}/api/organization",
+                cookies={cookie_key: token},
+            )
+
+            if response.status_code == 200:
+                logger.info(f"User with email {email} not found. Creating new user...")
+                # The password will not be used, as authentication will be handled
+                # through Social Dancing.
+                request.user = User.objects.create_user(
+                    email=email, password=User.objects.make_random_password()
+                )
+                response_data = response.json()
+                organization_name = response_data.get("organization", {}).get("name")
+                slug = self._slugify_string(organization_name)
+
+                organization = Organizer.objects.create(
+                    name=organization_name, slug=slug
+                )
+                t = Team.objects.create(
+                    organizer=organization,
+                    name=_("Administrators"),
+                    all_events=True,
+                    can_create_events=True,
+                    can_change_teams=True,
+                    can_manage_gift_cards=True,
+                    can_change_organizer_settings=True,
+                    can_change_event_settings=True,
+                    can_change_items=True,
+                    can_manage_customers=True,
+                    can_manage_reusable_media=True,
+                    can_view_orders=True,
+                    can_change_orders=True,
+                    can_view_vouchers=True,
+                    can_change_vouchers=True,
+                )
+                t.members.add(request.user)
+            else:
+                logger.error(
+                    "Failed to retrieve organization data. Redirecting user..."
+                )
+                return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
+        except Exception as e:
+            logger.error(f"Failed to set up new user with organization. Error: {e}")
+            return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
 
     def process_request(self, request):
         """
@@ -259,15 +331,12 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
             return self._handle_invalid_session(request, is_pretix_session_valid)
 
         try:
-            user = User.objects.get(email=email)
-            request.user = user
-
-            if not is_pretix_session_valid:
-                process_login(request, user, True)
-
+            request.user = User.objects.get(email=email)
         except User.DoesNotExist:
-            logger.error(f"User with email {email} not found")
-            return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/signin")
+            return self._handle_new_user(request, sd_session_data)
+
+        if not is_pretix_session_valid:
+            process_login(request, request.user, True)
 
 
 class CsrfViewMiddleware(BaseCsrfMiddleware):

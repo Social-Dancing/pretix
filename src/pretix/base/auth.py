@@ -34,11 +34,14 @@
 
 import requests
 import logging
+import pytz
+from datetime import datetime
 from collections import OrderedDict
 from importlib import import_module
 
 from django import forms
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
 
@@ -69,17 +72,42 @@ def get_sso_session(request):
     try:
         cookie_key = get_sso_session_cookie_key(request)
         token = request.COOKIES.get(cookie_key)
+        session_data = cache.get(cookie_key)
+
+        if session_data:
+            logger.info(f"Cache hit for SSO session data with key {cookie_key}")
+            session_expiration_date = datetime.strptime(
+                session_data.get("expires", {}), "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+            # Ensure both dates are timezone-aware for accurate comparison. The
+            # expiration date from the session data is converted to a
+            # timezone-aware datetime in UTC. The current time is also obtained
+            # as a timezone-aware datetime in UTC. This is essential because
+            # comparing timezone-naive dates with timezone-aware dates can lead
+            # to incorrect results.
+            is_session_valid = session_expiration_date.replace(
+                tzinfo=pytz.UTC
+            ) > datetime.now(pytz.UTC)
+            if is_session_valid:
+                return session_data
+            else:
+                logger.info(
+                    f"Session data stored with cache key '{cookie_key}' is expired."
+                )
+
+        logger.info("Fetching session data from API...")
         response = requests.get(
             f"{settings.PRETIX_CORE_SYSTEM_URL}/api/auth/session",
             cookies={cookie_key: token},
         )
 
         if response.status_code == 200:
-            return response.json()
-        else:
-            return None
+            session_data = response.json()
+            cache.set(cookie_key, session_data)
+
+        return session_data
     except Exception as e:
-        logger.error(f"Failed to validate SSO session token: {e}")
+        logger.error(f"An error occurred while validating the SSO session token: {e}")
         return None
 
 

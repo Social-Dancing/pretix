@@ -95,7 +95,7 @@ def get_sso_session(request):
                     f"Session data stored with cache key '{cookie_key}' is expired."
                 )
 
-        logger.info("Fetching session data from API...")
+        logger.info("Fetching session data from Core server...")
         response = requests.get(
             f"{settings.PRETIX_CORE_SYSTEM_URL}/api/auth/session",
             cookies={cookie_key: token},

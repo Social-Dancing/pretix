@@ -223,6 +223,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
             if not hasattr(request, "user"):
                 return False
             return assert_session_valid(request)
+
         except Exception as e:
             logger.warn(f"Invalid Pretix session found: {e}")
             return False
@@ -299,6 +300,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                     "Failed to retrieve organization data. Redirecting user..."
                 )
                 return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
+
         except Exception as e:
             logger.error(f"Failed to set up new user with organization. Error: {e}")
             return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")

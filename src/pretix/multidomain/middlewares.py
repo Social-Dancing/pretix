@@ -218,11 +218,15 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         Checks if the Pretix session is valid.
         """
         try:
-            # Return early to avoid errors from a missing 'user' attribute
-            # (e.g., "'WSGIRequest' object has no attribute 'user'").
-            if not hasattr(request, "user"):
-                return False
-            return assert_session_valid(request)
+            return (
+                bool(request.session.get("_auth_user_id"))
+                and request.session.session_key
+                and request.session.exists(request.session.session_key)
+                # Django automatically handles expired sessions. When a session
+                # is accessed and found to be expired, Django should return an
+                # empty session (meaning request.session.keys() would be empty).
+                and request.session.keys()
+            )
 
         except Exception as e:
             logger.warn(f"Invalid Pretix session found: {e}")
@@ -247,14 +251,15 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
 
         return lowercased_string
 
-    def _handle_new_user(self, request, session_data):
-        is_organization_profile_complete = session_data.get("organization", {}).get(
+    def _handle_new_user(self, request, sso_session_data):
+        is_organization_profile_complete = sso_session_data.get("organization", {}).get(
             "isProfileComplete"
         )
-        email = session_data.get("user", {}).get("email")
+        email = sso_session_data.get("user", {}).get("email")
         if not is_organization_profile_complete:
             return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
 
+        organizer = None
         try:
             cookie_key = get_sso_session_cookie_key(request)
             token = request.COOKIES.get(cookie_key)
@@ -263,7 +268,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 cookies={cookie_key: token},
             )
 
-            if response.status_code == 200:
+            if 200 <= response.status_code < 300:
                 logger.info(f"User with email {email} not found. Creating new user...")
                 # The password will not be used, as authentication will be handled
                 # through Social Dancing.
@@ -274,11 +279,9 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 organization_name = response_data.get("organization", {}).get("name")
                 slug = self._slugify_string(organization_name)
 
-                organization = Organizer.objects.create(
-                    name=organization_name, slug=slug
-                )
+                organizer = Organizer.objects.create(name=organization_name, slug=slug)
                 t = Team.objects.create(
-                    organizer=organization,
+                    organizer=organizer,
                     name=_("Administrators"),
                     all_events=True,
                     can_create_events=True,
@@ -302,8 +305,24 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
 
         except Exception as e:
-            logger.error(f"Failed to set up new user with organization. Error: {e}")
+            logger.error(f"Failed to set up new user with organizer. Error: {e}")
             return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
+
+        try:
+            logger.info(f"Sending organizer and user data to Core server...")
+
+            if request.user and organizer:
+                response = requests.post(
+                    f"{settings.PRETIX_CORE_SYSTEM_URL}/api/register-pretix-user",
+                    cookies={cookie_key: token},
+                    json={"organizationId": organizer.id, "userId": request.user.id},
+                )
+
+                if response.status_code >= 300 or response.status_code < 200:
+                    logger.error("Failed to register pretix user in Core server.")
+
+        except Exception as e:
+            logger.error(f"Failed to register pretix user in Core server. Error: {e}")
 
     def process_request(self, request):
         """

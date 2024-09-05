@@ -38,6 +38,7 @@ import pytz
 from datetime import datetime
 from collections import OrderedDict
 from importlib import import_module
+from urllib.parse import urlparse
 
 from django import forms
 from django.conf import settings
@@ -62,6 +63,13 @@ def get_sso_session_cookie_key(request):
     return (
         "__Secure-next-auth.session-token" if is_secure else "next-auth.session-token"
     )
+
+
+def get_sso_cookie_domain(request):
+    is_secure = request.scheme == "https"
+    host = urlparse(settings.PRETIX_CORE_SYSTEM_URL).hostname
+    domain = host if not is_secure else f".{host}"
+    return domain
 
 
 def get_sso_session(request):

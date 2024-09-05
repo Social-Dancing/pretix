@@ -62,6 +62,7 @@ from webauthn.helpers import generate_challenge
 from pretix.base.auth import (
     get_auth_backends,
     get_sso_session_cookie_key,
+    get_sso_cookie_domain,
 )
 from pretix.base.forms.auth import (
     LoginForm, PasswordForgotForm, PasswordRecoverForm, RegistrationForm,
@@ -194,7 +195,7 @@ def logout(request):
 
     response = HttpResponseRedirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/signin")
     cookie_key = get_sso_session_cookie_key(request)
-    response.delete_cookie(cookie_key)
+    response.delete_cookie(cookie_key, domain=get_sso_cookie_domain(request))
 
     return response
 

@@ -69,6 +69,7 @@ LOG_DIR = config.get('pretix', 'logdir', fallback=os.path.join(DATA_DIR, 'logs')
 MEDIA_ROOT = os.path.join(DATA_DIR, 'media')
 PROFILE_DIR = os.path.join(DATA_DIR, 'profiles')
 CACHE_DIR = config.get('pretix', 'cachedir', fallback=os.path.join(DATA_DIR, 'cache'))
+HMAC_SECRET_KEY = config.get("django", "hmac_secret_key", fallback="")
 
 if not os.path.exists(DATA_DIR):
     os.mkdir(DATA_DIR)
@@ -176,11 +177,10 @@ if config.has_section('replica'):
     DATABASE_ROUTERS = ['pretix.helpers.database.ReplicaRouter']
 
 STATIC_URL = config.get('urls', 'static', fallback='/static/')
-
 MEDIA_URL = config.get('urls', 'media', fallback='/media/')
+PRETIX_CORE_SYSTEM_URL = config.get('urls', 'core_system_url', fallback='https://socialdancing.events')
 
 PRETIX_INSTANCE_NAME = config.get('pretix', 'instance_name', fallback='pretix.de')
-PRETIX_CORE_SYSTEM_URL = config.get('pretix', 'core_system_url', fallback='https://socialdancing.events')
 PRETIX_REGISTRATION = config.getboolean('pretix', 'registration', fallback=False)
 PRETIX_PASSWORD_RESET = config.getboolean('pretix', 'password_reset', fallback=True)
 PRETIX_LONG_SESSIONS = config.getboolean('pretix', 'long_sessions', fallback=True)
@@ -412,6 +412,7 @@ REST_FRAMEWORK = {
         'pretix.api.auth.device.DeviceTokenAuthentication',
         'pretix.api.auth.session.SessionAuthentication',
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'pretix.api.auth.hmac.HMACAuthentication',
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'drf_ujson.renderers.UJSONRenderer',

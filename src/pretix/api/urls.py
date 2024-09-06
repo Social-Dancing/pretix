@@ -43,7 +43,7 @@ from pretix.api.views import cart
 from .views import (
     checkin, device, discount, event, exporters, idempotency, item, media,
     oauth, order, organizer, shredders, upload, user, version, voucher,
-    waitinglist, webhooks,
+    waitinglist, webhooks, logout
 )
 
 router = routers.DefaultRouter()
@@ -152,4 +152,7 @@ urlpatterns = [
     re_path(r"^upload$", upload.UploadView.as_view(), name="upload"),
     re_path(r"^me$", user.MeView.as_view(), name="user.me"),
     re_path(r"^version$", version.VersionView.as_view(), name="version"),
+
+    # Social Dancing APIs
+    re_path(r"^auth/logout/$", logout.LogoutView.as_view(), name="logout"),
 ]

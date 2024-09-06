@@ -313,7 +313,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
 
             if request.user and organizer:
                 response = requests.post(
-                    f"{settings.PRETIX_CORE_SYSTEM_URL}/api/register-pretix-user",
+                    f"{settings.PRETIX_CORE_SYSTEM_URL}/api/register-user",
                     cookies={cookie_key: token},
                     json={"organizationId": organizer.id, "userId": request.user.id},
                 )

@@ -69,7 +69,7 @@ LOG_DIR = config.get('pretix', 'logdir', fallback=os.path.join(DATA_DIR, 'logs')
 MEDIA_ROOT = os.path.join(DATA_DIR, 'media')
 PROFILE_DIR = os.path.join(DATA_DIR, 'profiles')
 CACHE_DIR = config.get('pretix', 'cachedir', fallback=os.path.join(DATA_DIR, 'cache'))
-HMAC_SECRET_KEY = config.get("django", "hmac_secret_key", fallback="")
+PRETIX_HMAC_SECRET_KEY = config.get("django", "hmac_secret_key", fallback="")
 
 if not os.path.exists(DATA_DIR):
     os.mkdir(DATA_DIR)

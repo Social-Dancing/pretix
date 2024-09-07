@@ -1,6 +1,5 @@
 import logging
 
-from django.core.cache import cache
 from django.http import JsonResponse
 from django.contrib.auth import logout as auth_logout
 from rest_framework.views import APIView

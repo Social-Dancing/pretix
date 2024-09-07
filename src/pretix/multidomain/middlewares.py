@@ -162,7 +162,7 @@ class SessionMiddleware(BaseSessionMiddleware):
     """
     def process_request(self, request):
         session_key = request.COOKIES.get(
-            '__Host-' + settings.SESSION_COOKIE_NAME,
+            '__Secure-' + settings.SESSION_COOKIE_NAME,
             request.COOKIES.get(settings.SESSION_COOKIE_NAME)
         )
         request.session = self.SessionStore(session_key)
@@ -178,8 +178,8 @@ class SessionMiddleware(BaseSessionMiddleware):
             # First check if we need to delete this cookie.
             # The session should be deleted only if the session is entirely empty
             is_secure = request.scheme == 'https'
-            if '__Host-' + settings.SESSION_COOKIE_NAME in request.COOKIES and empty:
-                response.delete_cookie('__Host-' + settings.SESSION_COOKIE_NAME)
+            if '__Secure-' + settings.SESSION_COOKIE_NAME in request.COOKIES and empty:
+                response.delete_cookie('__Secure-' + settings.SESSION_COOKIE_NAME)
             elif settings.SESSION_COOKIE_NAME in request.COOKIES and empty:
                 response.delete_cookie(settings.SESSION_COOKIE_NAME)
             else:
@@ -202,7 +202,7 @@ class SessionMiddleware(BaseSessionMiddleware):
                             response.delete_cookie(settings.SESSION_COOKIE_NAME, samesite="None")
                         set_cookie_without_samesite(
                             request, response,
-                            '__Host-' + settings.SESSION_COOKIE_NAME if is_secure else settings.SESSION_COOKIE_NAME,
+                            '__Secure-' + settings.SESSION_COOKIE_NAME if is_secure else settings.SESSION_COOKIE_NAME,
                             request.session.session_key, max_age=max_age,
                             expires=expires,
                             path=settings.SESSION_COOKIE_PATH,
@@ -379,7 +379,7 @@ class CsrfViewMiddleware(BaseCsrfMiddleware):
                 )
         else:
             try:
-                csrf_secret = request.COOKIES.get('__Host-' + settings.CSRF_COOKIE_NAME)
+                csrf_secret = request.COOKIES.get('__Secure-' + settings.CSRF_COOKIE_NAME)
                 if not csrf_secret:
                     csrf_secret = request.COOKIES[settings.CSRF_COOKIE_NAME]
             except KeyError:
@@ -407,7 +407,7 @@ class CsrfViewMiddleware(BaseCsrfMiddleware):
                 response.delete_cookie(settings.CSRF_COOKIE_NAME, samesite="None")
             set_cookie_without_samesite(
                 request, response,
-                '__Host-' + settings.CSRF_COOKIE_NAME if is_secure else settings.CSRF_COOKIE_NAME,
+                '__Secure-' + settings.CSRF_COOKIE_NAME if is_secure else settings.CSRF_COOKIE_NAME,
                 request.META["CSRF_COOKIE"],
                 max_age=settings.CSRF_COOKIE_AGE,
                 path=settings.CSRF_COOKIE_PATH,

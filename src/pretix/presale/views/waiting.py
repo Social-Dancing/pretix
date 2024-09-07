@@ -78,7 +78,7 @@ class WaitingView(EventViewMixin, FormView):
             # Widget just opened. Let's to a stupid redirect to check if cookies are disabled
             return redirect(request.get_full_path() + '&require_cookie=true')
         elif 'require_cookie' in request.GET and settings.SESSION_COOKIE_NAME not in request.COOKIES and\
-                '__Host-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES:
+                '__Secure-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES:
             # Cookies are in fact not supported. We can't even display the form, since we can't get CSRF right without
             # cookies.
             r = render(request, 'pretixpresale/event/cookies.html', {

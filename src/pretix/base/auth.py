@@ -80,10 +80,10 @@ def get_sso_session(request):
     try:
         cookie_key = get_sso_session_cookie_key(request)
         token = request.COOKIES.get(cookie_key)
-        session_data = cache.get(cookie_key)
+        session_data = cache.get(token)
 
         if session_data:
-            logger.info(f"Cache hit for SSO session data with key {cookie_key}")
+            logger.info(f"Cache hit for SSO session data with key {token}")
             session_expiration_date = datetime.strptime(
                 session_data.get("expires", {}), "%Y-%m-%dT%H:%M:%S.%fZ"
             )
@@ -100,7 +100,7 @@ def get_sso_session(request):
                 return session_data
             else:
                 logger.info(
-                    f"Session data stored with cache key '{cookie_key}' is expired."
+                    f"Session data stored with cache key '{token}' is expired."
                 )
 
         logger.info("Fetching session data from Core server...")
@@ -111,7 +111,7 @@ def get_sso_session(request):
 
         if response.status_code == 200:
             session_data = response.json()
-            cache.set(cookie_key, session_data)
+            cache.set(token, session_data)
 
         return session_data
     except Exception as e:

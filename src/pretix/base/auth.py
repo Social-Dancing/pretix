@@ -77,7 +77,7 @@ def remove_sso_session_from_cache(request):
 
 def get_sso_cookie_domain(request):
     is_secure = request.scheme == "https"
-    host = urlparse(settings.PRETIX_CORE_SYSTEM_URL).hostname
+    host = urlparse(settings.URLS_CORE_SYSTEM_URL).hostname
     domain = host if not is_secure else f".{host}"
     return domain
 
@@ -113,7 +113,7 @@ def get_sso_session(request):
 
         logger.info("Fetching session data from Core server...")
         response = requests.get(
-            f"{settings.PRETIX_CORE_SYSTEM_URL}/api/auth/session",
+            f"{settings.URLS_CORE_SYSTEM_URL}/api/auth/session",
             cookies={cookie_key: token},
         )
 

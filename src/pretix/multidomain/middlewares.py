@@ -236,7 +236,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         """
         Handles invalid session by logging out and redirecting to the sign-in page.
         """
-        redirect_url = f"{settings.PRETIX_CORE_SYSTEM_URL}/signin"
+        redirect_url = f"{settings.URLS_CORE_SYSTEM_URL}/signin"
         if is_pretix_session_valid:
             auth_logout(request)
             request.session["pretix_auth_login_time"] = 0
@@ -257,14 +257,14 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         )
         email = sso_session_data.get("user", {}).get("email")
         if not is_organization_profile_complete:
-            return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
+            return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
 
         organizer = None
         try:
             cookie_key = get_sso_session_cookie_key(request)
             token = request.COOKIES.get(cookie_key)
             response = requests.get(
-                f"{settings.PRETIX_CORE_SYSTEM_URL}/api/organization",
+                f"{settings.URLS_CORE_SYSTEM_URL}/api/organization",
                 cookies={cookie_key: token},
             )
 
@@ -302,18 +302,18 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 logger.error(
                     "Failed to retrieve organization data. Redirecting user..."
                 )
-                return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
+                return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
 
         except Exception as e:
             logger.error(f"Failed to set up new user with organizer. Error: {e}")
-            return redirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/admin")
+            return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
 
         try:
             logger.info(f"Sending organizer and user data to Core server...")
 
             if request.user and organizer:
                 response = requests.post(
-                    f"{settings.PRETIX_CORE_SYSTEM_URL}/api/register-user",
+                    f"{settings.URLS_CORE_SYSTEM_URL}/api/register-user",
                     cookies={cookie_key: token},
                     json={"organizationId": organizer.id, "userId": request.user.id},
                 )

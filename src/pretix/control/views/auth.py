@@ -194,7 +194,7 @@ def logout(request):
     auth_logout(request)
     request.session["pretix_auth_login_time"] = 0
 
-    response = HttpResponseRedirect(f"{settings.PRETIX_CORE_SYSTEM_URL}/signin")
+    response = HttpResponseRedirect(f"{settings.URLS_CORE_SYSTEM_URL}/signin")
     cookie_key = get_sso_session_cookie_key(request)
     response.delete_cookie(cookie_key, domain=get_sso_cookie_domain(request))
     remove_sso_session_from_cache(request)

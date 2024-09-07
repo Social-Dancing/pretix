@@ -76,4 +76,5 @@ Additional configurations
 -------
 
 [django] `hmac_secret_key`: Secret key to enable secure communication between Pretix and Social Dancing servers.
+[django] `cookie_domain`:  Domain to be used for all cookies set by the site.
 [urls]  `core_system_url`: Absolute URL of the Social Dancing app.

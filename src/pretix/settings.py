@@ -69,7 +69,7 @@ LOG_DIR = config.get('pretix', 'logdir', fallback=os.path.join(DATA_DIR, 'logs')
 MEDIA_ROOT = os.path.join(DATA_DIR, 'media')
 PROFILE_DIR = os.path.join(DATA_DIR, 'profiles')
 CACHE_DIR = config.get('pretix', 'cachedir', fallback=os.path.join(DATA_DIR, 'cache'))
-PRETIX_HMAC_SECRET_KEY = config.get("django", "hmac_secret_key", fallback="")
+DJANGO_HMAC_SECRET_KEY = config.get("django", "hmac_secret_key", fallback="")
 
 if not os.path.exists(DATA_DIR):
     os.mkdir(DATA_DIR)
@@ -178,7 +178,7 @@ if config.has_section('replica'):
 
 STATIC_URL = config.get('urls', 'static', fallback='/static/')
 MEDIA_URL = config.get('urls', 'media', fallback='/media/')
-PRETIX_CORE_SYSTEM_URL = config.get('urls', 'core_system_url', fallback='https://socialdancing.events')
+URLS_CORE_SYSTEM_URL = config.get('urls', 'core_system_url', fallback='https://socialdancing.events')
 
 PRETIX_INSTANCE_NAME = config.get('pretix', 'instance_name', fallback='pretix.de')
 PRETIX_REGISTRATION = config.getboolean('pretix', 'registration', fallback=False)
@@ -368,6 +368,10 @@ SESSION_COOKIE_NAME = 'pretix_session'
 LANGUAGE_COOKIE_NAME = 'pretix_language'
 CSRF_COOKIE_NAME = 'pretix_csrftoken'
 SESSION_COOKIE_HTTPONLY = True
+
+DJANGO_COOKIE_DOMAIN = config.get('django', 'cookie_domain', fallback='localhost')
+SESSION_COOKIE_DOMAIN = DJANGO_COOKIE_DOMAIN
+CSRF_COOKIE_DOMAIN = DJANGO_COOKIE_DOMAIN
 
 INSTALLED_APPS += [ # noqa
     'django_filters',

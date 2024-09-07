@@ -22,7 +22,7 @@ class HMACAuthentication(BaseAuthentication):
             raise AuthenticationFailed("Invalid body encoding")
 
         # Calculate the HMAC of the request body using the secret key.
-        secret = settings.PRETIX_HMAC_SECRET_KEY.encode("utf-8")
+        secret = settings.DJANGO_HMAC_SECRET_KEY.encode("utf-8")
         expected_signature = hmac.new(
             secret, body.encode("utf-8"), hashlib.sha256
         ).hexdigest()

@@ -65,6 +65,16 @@ def get_sso_session_cookie_key(request):
     )
 
 
+def remove_sso_session_from_cache(request):
+    cookie_key = get_sso_session_cookie_key(request)
+    token = request.COOKIES.get(cookie_key)
+    if token:
+        cache.delete(token)
+        logger.info(f"SSO token {token} removed from cache.")
+    else:
+        logger.warning("No SSO token found in cookies.")
+
+
 def get_sso_cookie_domain(request):
     is_secure = request.scheme == "https"
     host = urlparse(settings.PRETIX_CORE_SYSTEM_URL).hostname
@@ -99,9 +109,7 @@ def get_sso_session(request):
             if is_session_valid:
                 return session_data
             else:
-                logger.info(
-                    f"Session data stored with cache key '{token}' is expired."
-                )
+                logger.info(f"Session data stored with cache key '{token}' is expired.")
 
         logger.info("Fetching session data from Core server...")
         response = requests.get(

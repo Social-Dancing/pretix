@@ -236,6 +236,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         """
         Handles invalid session by logging out and redirecting to the sign-in page.
         """
+        logger.debug(f"Invalid session found. Redirecting user...")
         redirect_url = f"{settings.URLS_CORE_SYSTEM_URL}/signin"
         if is_pretix_session_valid:
             auth_logout(request)
@@ -252,14 +253,8 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         return lowercased_string
 
     def _handle_new_user(self, request, sso_session_data):
-        is_organization_profile_complete = sso_session_data.get("organization", {}).get(
-            "isProfileComplete"
-        )
-        email = sso_session_data.get("user", {}).get("email")
-        if not is_organization_profile_complete:
-            return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
-
         organizer = None
+
         try:
             cookie_key = get_sso_session_cookie_key(request)
             token = request.COOKIES.get(cookie_key)
@@ -269,16 +264,25 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
             )
 
             if 200 <= response.status_code < 300:
-                logger.info(f"User with email {email} not found. Creating new user...")
+                response_data = response.json()
+                is_organization_profile_complete = response_data.get(
+                    "organization", {}
+                ).get("isProfileComplete")
+
+                if not is_organization_profile_complete:
+                    logger.debug(
+                        "New user with incomplete organization profile found. Redirecting user..."
+                    )
+                    return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
+
                 # The password will not be used, as authentication will be handled
                 # through Social Dancing.
+                email = sso_session_data.get("user", {}).get("email")
                 request.user = User.objects.create_user(
                     email=email, password=User.objects.make_random_password()
                 )
-                response_data = response.json()
                 organization_name = response_data.get("organization", {}).get("name")
                 slug = self._slugify_string(organization_name)
-
                 organizer = Organizer.objects.create(name=organization_name, slug=slug)
                 t = Team.objects.create(
                     organizer=organizer,
@@ -313,13 +317,18 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
 
             if request.user and organizer:
                 response = requests.post(
-                    f"{settings.URLS_CORE_SYSTEM_URL}/api/register-user",
+                    f"{settings.URLS_CORE_SYSTEM_URL}/api/pretix/register-user",
                     cookies={cookie_key: token},
                     json={"organizationId": organizer.id, "userId": request.user.id},
                 )
 
                 if response.status_code >= 300 or response.status_code < 200:
                     logger.error("Failed to register pretix user in Core server.")
+                else:
+                    logger.debug(
+                        "Successfully registered pretix user in Core server. Logging in user..."
+                    )
+                    process_login(request, request.user, True)
 
         except Exception as e:
             logger.error(f"Failed to register pretix user in Core server. Error: {e}")
@@ -354,9 +363,11 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
         try:
             request.user = User.objects.get(email=email)
         except User.DoesNotExist:
+            logger.debug(f"Handling new user with email {email}")
             return self._handle_new_user(request, sd_session_data)
 
         if not is_pretix_session_valid:
+            logger.debug(f"Logging in user with email {email} via SSO")
             process_login(request, request.user, True)
 
 

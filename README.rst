@@ -71,10 +71,11 @@ specified in the LICENSE file. The following changes have been applied:
 - Theme and logo updates to align with Social Dancing branding
 - Customized Dockerfile to support specific setup requirements
 - Enable single sign-on (SS0) and single log-out (SLO) between Pretix and Social Dancing
+- Hide settings for changing user password and email
 
 Additional configurations
 -------
 
 [django] `hmac_secret_key`: Secret key to enable secure communication between Pretix and Social Dancing servers.
 [django] `cookie_domain`:  Domain to be used for all cookies set by the site.
-[urls]  `core_system_url`: Absolute URL of the Social Dancing app.
+[urls] `core_system_url`: Absolute URL of the Social Dancing app.

@@ -100,7 +100,7 @@ class CartActionMixin:
         disclose_cart_id = (
             'iframe' in self.request.GET or (
                 settings.SESSION_COOKIE_NAME not in self.request.COOKIES and
-                '__Host-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES
+                '__Secure-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES
             )
         ) and self.kwargs.get('cart_namespace')
         if disclose_cart_id:
@@ -126,7 +126,7 @@ class CartActionMixin:
             disclose_cart_id = (
                 'iframe' in self.request.GET or (
                     settings.SESSION_COOKIE_NAME not in self.request.COOKIES and
-                    '__Host-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES
+                    '__Secure-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES
                 )
             ) and self.kwargs.get('cart_namespace')
             if disclose_cart_id:
@@ -603,7 +603,7 @@ class RedeemView(NoSearchIndexViewMixin, EventViewMixin, CartMixin, TemplateView
         context['new_tab'] = (
             'require_cookie' in self.request.GET and
             settings.SESSION_COOKIE_NAME not in self.request.COOKIES and
-            '__Host-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES
+            '__Secure-' + settings.SESSION_COOKIE_NAME not in self.request.COOKIES
             # Cookies are not supported! Lets just make the form open in a new tab
         )
 

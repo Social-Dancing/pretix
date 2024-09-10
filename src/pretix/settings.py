@@ -70,6 +70,7 @@ LOG_DIR = config.get('pretix', 'logdir', fallback=os.path.join(DATA_DIR, 'logs')
 MEDIA_ROOT = os.path.join(DATA_DIR, 'media')
 PROFILE_DIR = os.path.join(DATA_DIR, 'profiles')
 CACHE_DIR = config.get('pretix', 'cachedir', fallback=os.path.join(DATA_DIR, 'cache'))
+DJANGO_HMAC_SECRET_KEY = config.get("django", "hmac_secret_key", fallback="")
 
 Path(DATA_DIR).mkdir(parents=False, exist_ok=True)
 Path(LOG_DIR).mkdir(parents=False, exist_ok=True)
@@ -173,8 +174,8 @@ if config.has_section('replica'):
     DATABASE_ROUTERS = ['pretix.helpers.database.ReplicaRouter']
 
 STATIC_URL = config.get('urls', 'static', fallback='/static/')
-
 MEDIA_URL = config.get('urls', 'media', fallback='/media/')
+URLS_CORE_SYSTEM_URL = config.get('urls', 'core_system_url', fallback='https://socialdancing.events')
 
 PRETIX_INSTANCE_NAME = config.get('pretix', 'instance_name', fallback='pretix.de')
 PRETIX_REGISTRATION = config.getboolean('pretix', 'registration', fallback=False)
@@ -365,6 +366,10 @@ LANGUAGE_COOKIE_NAME = 'pretix_language'
 CSRF_COOKIE_NAME = 'pretix_csrftoken'
 SESSION_COOKIE_HTTPONLY = True
 
+DJANGO_COOKIE_DOMAIN = config.get('django', 'cookie_domain', fallback='localhost')
+SESSION_COOKIE_DOMAIN = DJANGO_COOKIE_DOMAIN
+CSRF_COOKIE_DOMAIN = DJANGO_COOKIE_DOMAIN
+
 INSTALLED_APPS += [ # noqa
     'django_filters',
     'django_markup',
@@ -408,6 +413,7 @@ REST_FRAMEWORK = {
         'pretix.api.auth.device.DeviceTokenAuthentication',
         'pretix.api.auth.session.SessionAuthentication',
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'pretix.api.auth.hmac.HMACAuthentication',
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'drf_ujson.renderers.UJSONRenderer',
@@ -441,6 +447,7 @@ MIDDLEWARE = [
     'pretix.multidomain.middlewares.MultiDomainMiddleware',
     'pretix.base.middleware.CustomCommonMiddleware',
     'pretix.multidomain.middlewares.SessionMiddleware',
+    'pretix.multidomain.middlewares.SocialDancingSsoMiddleware',
     'pretix.multidomain.middlewares.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

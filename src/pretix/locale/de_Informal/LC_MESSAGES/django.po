@@ -36805,3 +36805,6 @@ msgstr "Kosovo"
 
 #~ msgid "Restricition by time"
 #~ msgstr "Zeitliche Beschränkung"
+
+msgid "Return to home platform"
+msgstr "Zurück zur Startplattform"

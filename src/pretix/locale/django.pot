@@ -30486,3 +30486,6 @@ msgstr ""
 #: pretix/settings.py:757
 msgid "Kosovo"
 msgstr ""
+
+msgid "Return to home platform"
+msgstr ""

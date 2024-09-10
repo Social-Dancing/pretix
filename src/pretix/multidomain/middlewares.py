@@ -33,11 +33,24 @@
 # License for the specific language governing permissions and limitations under the License.
 
 import time
+import re
+import requests
+import logging
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+from pretix.base.models import User, Team, Organizer
+from pretix.base.auth import (
+    get_sso_session_cookie_key,
+    get_sso_session,
+)
+from pretix.control.views.auth import process_login
 from django.contrib.sessions.middleware import (
     SessionMiddleware as BaseSessionMiddleware,
+)
+from django.contrib.auth import (
+    logout as auth_logout,
 )
 from django.core.cache import cache
 from django.core.exceptions import DisallowedHost, ImproperlyConfigured
@@ -47,7 +60,7 @@ from django.middleware.csrf import (
     CsrfViewMiddleware as BaseCsrfMiddleware, _check_token_format,
     _unmask_cipher_token,
 )
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import set_urlconf
 from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
@@ -56,9 +69,11 @@ from django_scopes import scopes_disabled
 
 from pretix.base.models import Event, Organizer
 from pretix.helpers.cookies import set_cookie_without_samesite
+from pretix.helpers.security import assert_session_valid
 from pretix.multidomain.models import KnownDomain
 
-LOCAL_HOST_NAMES = ('testserver', 'localhost')
+LOCAL_HOST_NAMES = ("testserver", "localhost")
+logger = logging.getLogger(__name__)
 
 
 class MultiDomainMiddleware(MiddlewareMixin):
@@ -145,10 +160,9 @@ class SessionMiddleware(BaseSessionMiddleware):
     cookie domains differently depending on whether we are on the main domain or
     a custom domain.
     """
-
     def process_request(self, request):
         session_key = request.COOKIES.get(
-            '__Host-' + settings.SESSION_COOKIE_NAME,
+            '__Secure-' + settings.SESSION_COOKIE_NAME,
             request.COOKIES.get(settings.SESSION_COOKIE_NAME)
         )
         request.session = self.SessionStore(session_key)
@@ -164,8 +178,8 @@ class SessionMiddleware(BaseSessionMiddleware):
             # First check if we need to delete this cookie.
             # The session should be deleted only if the session is entirely empty
             is_secure = request.scheme == 'https'
-            if '__Host-' + settings.SESSION_COOKIE_NAME in request.COOKIES and empty:
-                response.delete_cookie('__Host-' + settings.SESSION_COOKIE_NAME)
+            if '__Secure-' + settings.SESSION_COOKIE_NAME in request.COOKIES and empty:
+                response.delete_cookie('__Secure-' + settings.SESSION_COOKIE_NAME)
             elif settings.SESSION_COOKIE_NAME in request.COOKIES and empty:
                 response.delete_cookie(settings.SESSION_COOKIE_NAME)
             else:
@@ -188,7 +202,7 @@ class SessionMiddleware(BaseSessionMiddleware):
                             response.delete_cookie(settings.SESSION_COOKIE_NAME, samesite="None")
                         set_cookie_without_samesite(
                             request, response,
-                            '__Host-' + settings.SESSION_COOKIE_NAME if is_secure else settings.SESSION_COOKIE_NAME,
+                            '__Secure-' + settings.SESSION_COOKIE_NAME if is_secure else settings.SESSION_COOKIE_NAME,
                             request.session.session_key, max_age=max_age,
                             expires=expires,
                             path=settings.SESSION_COOKIE_PATH,
@@ -196,6 +210,165 @@ class SessionMiddleware(BaseSessionMiddleware):
                             httponly=settings.SESSION_COOKIE_HTTPONLY or None
                         )
         return response
+
+
+class SocialDancingSsoMiddleware(BaseSessionMiddleware):
+    def _validate_pretix_session(self, request):
+        """
+        Checks if the Pretix session is valid.
+        """
+        try:
+            return (
+                bool(request.session.get("_auth_user_id"))
+                and request.session.session_key
+                and request.session.exists(request.session.session_key)
+                # Django automatically handles expired sessions. When a session
+                # is accessed and found to be expired, Django should return an
+                # empty session (meaning request.session.keys() would be empty).
+                and request.session.keys()
+            )
+
+        except Exception as e:
+            logger.warn(f"Invalid Pretix session found: {e}")
+            return False
+
+    def _handle_invalid_session(self, request, is_pretix_session_valid):
+        """
+        Handles invalid session by logging out and redirecting to the sign-in page.
+        """
+        logger.debug(f"Invalid session found. Redirecting user...")
+        redirect_url = f"{settings.URLS_CORE_SYSTEM_URL}/signin"
+        if is_pretix_session_valid:
+            auth_logout(request)
+            request.session["pretix_auth_login_time"] = 0
+        return redirect(redirect_url)
+
+    def _slugify_string(self, input_string):
+        # Remove special characters (keeping only alphanumeric characters and spaces).
+        cleaned_string = re.sub(r"[^a-zA-Z0-9\s]", "", input_string)
+        # Replace spaces with hyphens.
+        hyphenated_string = re.sub(r"\s+", "-", cleaned_string)
+        lowercased_string = hyphenated_string.lower()
+
+        return lowercased_string
+
+    def _handle_new_user(self, request, sso_session_data):
+        organizer = None
+
+        try:
+            cookie_key = get_sso_session_cookie_key(request)
+            token = request.COOKIES.get(cookie_key)
+            response = requests.get(
+                f"{settings.URLS_CORE_SYSTEM_URL}/api/organization",
+                cookies={cookie_key: token},
+            )
+
+            if 200 <= response.status_code < 300:
+                response_data = response.json()
+                is_organization_profile_complete = response_data.get(
+                    "organization", {}
+                ).get("isProfileComplete")
+
+                if not is_organization_profile_complete:
+                    logger.debug(
+                        "New user with incomplete organization profile found. Redirecting user..."
+                    )
+                    return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
+
+                # The password will not be used, as authentication will be handled
+                # through Social Dancing.
+                email = sso_session_data.get("user", {}).get("email")
+                request.user = User.objects.create_user(
+                    email=email, password=User.objects.make_random_password()
+                )
+                organization_name = response_data.get("organization", {}).get("name")
+                slug = self._slugify_string(organization_name)
+                organizer = Organizer.objects.create(name=organization_name, slug=slug)
+                t = Team.objects.create(
+                    organizer=organizer,
+                    name=_("Administrators"),
+                    all_events=True,
+                    can_create_events=True,
+                    can_change_teams=True,
+                    can_manage_gift_cards=True,
+                    can_change_organizer_settings=True,
+                    can_change_event_settings=True,
+                    can_change_items=True,
+                    can_manage_customers=True,
+                    can_manage_reusable_media=True,
+                    can_view_orders=True,
+                    can_change_orders=True,
+                    can_view_vouchers=True,
+                    can_change_vouchers=True,
+                )
+                t.members.add(request.user)
+            else:
+                logger.error(
+                    "Failed to retrieve organization data. Redirecting user..."
+                )
+                return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
+
+        except Exception as e:
+            logger.error(f"Failed to set up new user with organizer. Error: {e}")
+            return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
+
+        try:
+            logger.info(f"Sending organizer and user data to Core server...")
+
+            if request.user and organizer:
+                response = requests.post(
+                    f"{settings.URLS_CORE_SYSTEM_URL}/api/pretix/register-user",
+                    cookies={cookie_key: token},
+                    json={"organizationId": organizer.id, "userId": request.user.id},
+                )
+
+                if response.status_code >= 300 or response.status_code < 200:
+                    logger.error("Failed to register pretix user in Core server.")
+                else:
+                    logger.debug(
+                        "Successfully registered pretix user in Core server. Logging in user..."
+                    )
+                    process_login(request, request.user, True)
+
+        except Exception as e:
+            logger.error(f"Failed to register pretix user in Core server. Error: {e}")
+
+    def process_request(self, request):
+        """
+        Middleware method to handle user authentication via Social Dancing SSO.
+        Validates the SSO session and manages user sessions in Pretix.
+        Redirects to the Social Dancing sign-in page if validation fails or user is not found.
+        """
+        if not request.path.startswith("/control"):
+            return None
+
+        is_pretix_session_valid = self._validate_pretix_session(request)
+        cookie_key = get_sso_session_cookie_key(request)
+        sd_token = request.COOKIES.get(cookie_key)
+
+        if not sd_token:
+            return self._handle_invalid_session(request, is_pretix_session_valid)
+
+        sd_session_data = get_sso_session(request)
+        if not sd_session_data:
+            return self._handle_invalid_session(request, is_pretix_session_valid)
+
+        # Assumes that the user's email address is consistent between Social
+        # Dancing and Pretix. This synchronization is critical for correctly
+        # identifying and authenticating the user across both systems.
+        email = sd_session_data.get("user", {}).get("email")
+        if not email:
+            return self._handle_invalid_session(request, is_pretix_session_valid)
+
+        try:
+            request.user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            logger.debug(f"Handling new user with email {email}")
+            return self._handle_new_user(request, sd_session_data)
+
+        if not is_pretix_session_valid:
+            logger.debug(f"Logging in user with email {email} via SSO")
+            process_login(request, request.user, True)
 
 
 class CsrfViewMiddleware(BaseCsrfMiddleware):
@@ -217,7 +390,7 @@ class CsrfViewMiddleware(BaseCsrfMiddleware):
                 )
         else:
             try:
-                csrf_secret = request.COOKIES.get('__Host-' + settings.CSRF_COOKIE_NAME)
+                csrf_secret = request.COOKIES.get('__Secure-' + settings.CSRF_COOKIE_NAME)
                 if not csrf_secret:
                     csrf_secret = request.COOKIES[settings.CSRF_COOKIE_NAME]
             except KeyError:
@@ -245,7 +418,7 @@ class CsrfViewMiddleware(BaseCsrfMiddleware):
                 response.delete_cookie(settings.CSRF_COOKIE_NAME, samesite="None")
             set_cookie_without_samesite(
                 request, response,
-                '__Host-' + settings.CSRF_COOKIE_NAME if is_secure else settings.CSRF_COOKIE_NAME,
+                '__Secure-' + settings.CSRF_COOKIE_NAME if is_secure else settings.CSRF_COOKIE_NAME,
                 request.META["CSRF_COOKIE"],
                 max_age=settings.CSRF_COOKIE_AGE,
                 path=settings.CSRF_COOKIE_PATH,

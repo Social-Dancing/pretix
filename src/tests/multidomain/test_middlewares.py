@@ -199,8 +199,8 @@ def test_cookie_samesite_none(env, client, agent):
     client.post('/mrmcd/2015/cart/add', HTTP_HOST='example.com', HTTP_USER_AGENT=agent,
                 secure=True)
     r = client.get('/mrmcd/2015/', HTTP_HOST='example.com', HTTP_USER_AGENT=agent, secure=True)
-    assert r.client.cookies['__Host-pretix_csrftoken']['samesite'] == 'None'
-    assert r.client.cookies['__Host-pretix_session']['samesite'] == 'None'
+    assert r.client.cookies['__Secure-pretix_csrftoken']['samesite'] == 'None'
+    assert r.client.cookies['__Secure-pretix_session']['samesite'] == 'None'
 
 
 @pytest.mark.django_db
@@ -219,4 +219,4 @@ def test_cookie_samesite_none(env, client, agent):
 def test_cookie_samesite_none_only_on_compatible_browsers(env, client, agent):
     client.post('/mrmcd/2015/cart/add', HTTP_HOST='example.com', HTTP_USER_AGENT=agent, secure=True)
     r = client.get('/mrmcd/2015/', HTTP_HOST='example.com', HTTP_USER_AGENT=agent, secure=True)
-    assert not r.client.cookies['__Host-pretix_csrftoken'].get('samesite')
+    assert not r.client.cookies['__Secure-pretix_csrftoken'].get('samesite')

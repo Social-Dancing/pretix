@@ -47,7 +47,7 @@ from django.contrib.auth import (
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.functional import cached_property
@@ -59,7 +59,12 @@ from django.views.generic import TemplateView
 from django_otp import match_token
 from webauthn.helpers import generate_challenge
 
-from pretix.base.auth import get_auth_backends
+from pretix.base.auth import (
+    get_auth_backends,
+    get_sso_session_cookie_key,
+    get_sso_cookie_domain,
+    remove_sso_session_from_cache,
+)
 from pretix.base.forms.auth import (
     LoginForm, PasswordForgotForm, PasswordRecoverForm, RegistrationForm,
 )
@@ -183,16 +188,18 @@ def bad_origin_report(request):
 
 def logout(request):
     """
-    Log the user out of the current session, then redirect to login page.
+    Log the user out of the Pretix and SSO session, then redirect
+    them to Social Dancing signin page.
     """
     auth_logout(request)
-    request.session['pretix_auth_login_time'] = 0
-    next = reverse('control:auth.login')
-    if 'next' in request.GET and url_has_allowed_host_and_scheme(request.GET.get('next'), allowed_hosts=None):
-        next += '?next=' + quote(request.GET.get('next'))
-    if 'back' in request.GET and url_has_allowed_host_and_scheme(request.GET.get('back'), allowed_hosts=None):
-        return redirect_to_url(request.GET.get('back'))
-    return redirect_to_url(next)
+    request.session["pretix_auth_login_time"] = 0
+
+    response = HttpResponseRedirect(f"{settings.URLS_CORE_SYSTEM_URL}/signin")
+    cookie_key = get_sso_session_cookie_key(request)
+    response.delete_cookie(cookie_key, domain=get_sso_cookie_domain(request))
+    remove_sso_session_from_cache(request)
+
+    return response
 
 
 def register(request):

@@ -33336,3 +33336,6 @@ msgstr "Kosovo"
 #~ msgstr ""
 #~ "Nesprávna syntax zástupného symbolu: Použili ste iný počet \"{\" ako "
 #~ "\"}\"."
+
+msgid "Return to home platform"
+msgstr "Späť na štartovaciu platformu"

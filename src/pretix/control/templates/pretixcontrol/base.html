@@ -280,6 +280,12 @@
                                     </a>
                                 </li>
                             {% endif %}
+                            <li>
+                                <a href="{{ settings.URLS_CORE_SYSTEM_URL|add:'/admin' }}">
+                                    <i class="fa fa-arrow-left fa-fw"></i>
+                                    {% trans "Return to home platform" %}
+                                </a>
+                            </li>
                             {% block nav %}
                                 {% for nav in nav_items %}
                                     <li>

@@ -32,13 +32,21 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under the License.
 
+import requests
+import logging
+import pytz
+from datetime import datetime
 from collections import OrderedDict
 from importlib import import_module
+from urllib.parse import urlparse
 
 from django import forms
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
+
+logger = logging.getLogger(__name__)
 
 
 def get_auth_backends():
@@ -48,6 +56,75 @@ def get_auth_backends():
         b = getattr(import_module(mod), name)()
         backends[b.identifier] = b
     return backends
+
+
+def get_sso_session_cookie_key(request):
+    is_secure = request.scheme == "https"
+    return (
+        "__Secure-next-auth.session-token" if is_secure else "next-auth.session-token"
+    )
+
+
+def remove_sso_session_from_cache(request):
+    cookie_key = get_sso_session_cookie_key(request)
+    token = request.COOKIES.get(cookie_key)
+    if token:
+        cache.delete(token)
+        logger.info(f"SSO token {token} removed from cache.")
+    else:
+        logger.warning("No SSO token found in cookies.")
+
+
+def get_sso_cookie_domain(request):
+    is_secure = request.scheme == "https"
+    host = urlparse(settings.URLS_CORE_SYSTEM_URL).hostname
+    domain = host if not is_secure else f".{host}"
+    return domain
+
+
+def get_sso_session(request):
+    """
+    Validate the SSO session token by communicating with the Social Dancing
+    server. Returns user data if the session is valid, otherwise None.
+    """
+    try:
+        cookie_key = get_sso_session_cookie_key(request)
+        token = request.COOKIES.get(cookie_key)
+        session_data = cache.get(token)
+
+        if session_data:
+            logger.info(f"Cache hit for SSO session data with key {token}")
+            session_expiration_date = datetime.strptime(
+                session_data.get("expires", {}), "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+            # Ensure both dates are timezone-aware for accurate comparison. The
+            # expiration date from the session data is converted to a
+            # timezone-aware datetime in UTC. The current time is also obtained
+            # as a timezone-aware datetime in UTC. This is essential because
+            # comparing timezone-naive dates with timezone-aware dates can lead
+            # to incorrect results.
+            is_session_valid = session_expiration_date.replace(
+                tzinfo=pytz.UTC
+            ) > datetime.now(pytz.UTC)
+            if is_session_valid:
+                return session_data
+            else:
+                logger.info(f"Session data stored with cache key '{token}' is expired.")
+
+        logger.info("Fetching session data from Core server...")
+        response = requests.get(
+            f"{settings.URLS_CORE_SYSTEM_URL}/api/auth/session",
+            cookies={cookie_key: token},
+        )
+
+        if response.status_code == 200:
+            session_data = response.json()
+            cache.set(token, session_data)
+
+        return session_data
+    except Exception as e:
+        logger.error(f"An error occurred while validating the SSO session token: {e}")
+        return None
 
 
 class BaseAuthBackend:

@@ -26,6 +26,7 @@ from django.conf import settings
 
 def set_cookie_without_samesite(request, response, key, *args, **kwargs):
     assert 'samesite' not in kwargs
+    kwargs["domain"] = settings.DJANGO_COOKIE_DOMAIN
     response.set_cookie(key, *args, **kwargs)
     is_secure = (
         kwargs.get('secure', False) or request.scheme == 'https' or

@@ -213,6 +213,53 @@ class SessionMiddleware(BaseSessionMiddleware):
 
 
 class SocialDancingSsoMiddleware(BaseSessionMiddleware):
+    def is_user_consent_up_to_date(self, request):
+        """
+        Check if the user's consent for terms and policies is up-to-date by
+        retrieving the status from a cache or making an API request.
+        """
+        cookie_key = get_sso_session_cookie_key(request)
+        token = request.COOKIES.get(cookie_key)
+        cache_key = f"consent-{token}"
+        isConsentUpToDate = cache.get(cache_key)
+
+        if isConsentUpToDate is not None:
+            logger.info(f"Cache hit for user consent with key {cache_key}")
+            return isConsentUpToDate
+
+        try:
+            response = requests.get(
+                f"{settings.URLS_CORE_SYSTEM_URL}/api/consent-status",
+                cookies={cookie_key: token},
+            )
+
+            if response.status_code >= 300 or response.status_code < 200:
+                logger.error(
+                    f"Unable to retrieve consent status of user {request.user.email}.")
+            else:
+                response_data = response.json()
+                isConsentUpToDate = response_data.get(
+                    "isConsentUpToDate", {}
+                )
+                if isConsentUpToDate:
+                    # Cache the consent status only if it is true. If the
+                    # consent is outdated, we prefer to check it on each visit
+                    # to ensure the user has accepted the latest terms and
+                    # policies. However, if the user's consent is not
+                    # up-to-date, it's acceptable to allow access to the ticket
+                    # platform for the duration of the cache (typically a few
+                    # hours).
+                    cache.set(cache_key, isConsentUpToDate)
+                return isConsentUpToDate
+
+        except Exception as e:
+            logger.warning(
+                f"An error occurred retrieving consent status of user {request.user.email}. Error: {e}")
+
+        # In case of any failure, assume consent is valid to avoid blocking the
+        # user.
+        return True
+
     def _validate_pretix_session(self, request):
         """
         Checks if the Pretix session is valid.
@@ -229,7 +276,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
             )
 
         except Exception as e:
-            logger.warn(f"Invalid Pretix session found: {e}")
+            logger.warning(f"Invalid Pretix session found: {e}")
             return False
 
     def _handle_invalid_session(self, request, is_pretix_session_valid):
@@ -281,9 +328,11 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 request.user = User.objects.create_user(
                     email=email, password=User.objects.make_random_password()
                 )
-                organization_name = response_data.get("organization", {}).get("name")
+                organization_name = response_data.get(
+                    "organization", {}).get("name")
                 slug = self._slugify_string(organization_name)
-                organizer = Organizer.objects.create(name=organization_name, slug=slug)
+                organizer = Organizer.objects.create(
+                    name=organization_name, slug=slug)
                 t = Team.objects.create(
                     organizer=organizer,
                     name=_("Administrators"),
@@ -309,7 +358,8 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
 
         except Exception as e:
-            logger.error(f"Failed to set up new user with organizer. Error: {e}")
+            logger.error(
+                f"Failed to set up new user with organizer. Error: {e}")
             return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
 
         try:
@@ -319,11 +369,13 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 response = requests.post(
                     f"{settings.URLS_CORE_SYSTEM_URL}/api/pretix/register-user",
                     cookies={cookie_key: token},
-                    json={"organizationId": organizer.id, "userId": request.user.id},
+                    json={"organizationId": organizer.id,
+                          "userId": request.user.id},
                 )
 
                 if response.status_code >= 300 or response.status_code < 200:
-                    logger.error("Failed to register pretix user in Core server.")
+                    logger.error(
+                        "Failed to register pretix user in Core server.")
                 else:
                     logger.debug(
                         "Successfully registered pretix user in Core server. Logging in user..."
@@ -331,7 +383,8 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                     process_login(request, request.user, True)
 
         except Exception as e:
-            logger.error(f"Failed to register pretix user in Core server. Error: {e}")
+            logger.error(
+                f"Failed to register pretix user in Core server. Error: {e}")
 
     def process_request(self, request):
         """
@@ -362,6 +415,10 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
 
         try:
             request.user = User.objects.get(email=email)
+            if not self.is_user_consent_up_to_date(request):
+                logger.debug(
+                    f"Outdated consent found for user {request.user.email}. Redirecting user...")
+                return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
         except User.DoesNotExist:
             logger.debug(f"Handling new user with email {email}")
             return self._handle_new_user(request, sd_session_data)

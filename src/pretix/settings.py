@@ -259,6 +259,7 @@ if HAS_MEMCACHED:
     CACHES['default'] = {
         'BACKEND': 'django.core.cache.backends.memcached.PyLibMCCache',
         'LOCATION': config.get('memcached', 'location'),
+        'TIMEOUT': 10800 # Cache timeout in seconds.
     }
 
 HAS_REDIS = config.has_option('redis', 'location')

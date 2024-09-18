@@ -33,6 +33,7 @@
 # License for the specific language governing permissions and limitations under the License.
 
 from django.apps import AppConfig
+import posthog
 
 
 class PretixBaseConfig(AppConfig):
@@ -58,6 +59,9 @@ class PretixBaseConfig(AppConfig):
         if hasattr(settings, 'RAVEN_CONFIG'):
             from ..sentry import initialize
             initialize()
+
+        posthog.api_key = settings.POSTHOG_API_KEY
+        posthog.host = 'https://eu.i.posthog.com'
 
 
 try:

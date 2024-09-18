@@ -97,7 +97,8 @@ def process_login(request, user, keep_logged_in):
     else:
         logger.info(f"Backend login successful for user {user.pk}.")
         pretix_successful_logins.inc(1)
-        handle_login_source(user, request)
+        # Suppress all login notifications, as the Core server handles the login process.
+        # handle_login_source(user, request)
         auth_login(request, user)
         request.session['pretix_auth_login_time'] = int(time.time())
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=None):
@@ -543,7 +544,8 @@ class Login2FAView(TemplateView):
         if valid:
             logger.info(f"Backend login successful for user {self.user.pk} with 2FA.")
             pretix_successful_logins.inc(1)
-            handle_login_source(self.user, request)
+            # Suppress all login notifications, as the Core server handles the login process.
+            # handle_login_source(user, request)
             auth_login(request, self.user)
             request.session['pretix_auth_login_time'] = int(time.time())
             del request.session['pretix_auth_2fa_user']

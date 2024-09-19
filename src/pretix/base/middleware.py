@@ -28,6 +28,7 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.middleware.common import CommonMiddleware
 from django.urls import get_script_prefix, resolve
 from django.utils import timezone, translation
+from django.utils.crypto import get_random_string
 from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.translation.trans_real import (
@@ -240,6 +241,9 @@ class SecurityMiddleware(MiddlewareMixin):
         '/api/v1/docs/',
     )
 
+    def process_request(self, request):
+        request.nonce = get_random_string(16)
+
     def process_response(self, request, resp):
         def nested_dict_values(d):
             for v in d.values():
@@ -276,7 +280,7 @@ class SecurityMiddleware(MiddlewareMixin):
 
         h = {
             'default-src': ["{static}"],
-            'script-src': ['{static}'],
+            'script-src': ['{static}', f"'nonce-{request.nonce}'"],
             'object-src': ["'none'"],
             'frame-src': ['{static}'],
             'style-src': ["{static}", "{media}"],

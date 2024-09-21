@@ -76,6 +76,7 @@ specified in the LICENSE file. The following changes have been applied:
 Additional configurations
 -------
 
+[pretix] `posthog_api_key`: Project API key of your PostHog account.
 [django] `hmac_secret_key`: Secret key to enable secure communication between Pretix and Social Dancing servers.
 [django] `cookie_domain`:  Domain to be used for all cookies set by the site.
 [urls] `core_system_url`: Absolute URL of the Social Dancing app.

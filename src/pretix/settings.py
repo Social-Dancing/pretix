@@ -71,6 +71,7 @@ MEDIA_ROOT = os.path.join(DATA_DIR, 'media')
 PROFILE_DIR = os.path.join(DATA_DIR, 'profiles')
 CACHE_DIR = config.get('pretix', 'cachedir', fallback=os.path.join(DATA_DIR, 'cache'))
 DJANGO_HMAC_SECRET_KEY = config.get("django", "hmac_secret_key", fallback="")
+POSTHOG_API_KEY = config.get('pretix', 'posthog_api_key', fallback=None)
 
 Path(DATA_DIR).mkdir(parents=False, exist_ok=True)
 Path(LOG_DIR).mkdir(parents=False, exist_ok=True)
@@ -259,6 +260,7 @@ if HAS_MEMCACHED:
     CACHES['default'] = {
         'BACKEND': 'django.core.cache.backends.memcached.PyLibMCCache',
         'LOCATION': config.get('memcached', 'location'),
+        'TIMEOUT': 10800 # Cache timeout in seconds.
     }
 
 HAS_REDIS = config.has_option('redis', 'location')

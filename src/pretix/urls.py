@@ -34,7 +34,7 @@
 
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import include, re_path
+from django.urls import include, re_path, path
 from django.views.generic import RedirectView
 
 import pretix.control.urls
@@ -44,6 +44,11 @@ from pretix.base.views import applepay, js_helpers
 from .base.views import (
     cachedfiles, csp, health, js_catalog, metrics, redirect, source,
 )
+
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 
 base_patterns = [
     re_path(r'^download/(?P<id>[^/]+)/$', cachedfiles.DownloadView.as_view(),
@@ -61,6 +66,8 @@ base_patterns = [
     re_path(r'^api/$', RedirectView.as_view(url='/api/v1/'), name='redirect-api-version'),
     re_path(r'^.well-known/apple-developer-merchantid-domain-association$',
             applepay.association, name='applepay.association'),
+    # TODO: Remove in upcoming release.
+    path('sentry-debug/', trigger_error),
 ]
 
 control_patterns = [

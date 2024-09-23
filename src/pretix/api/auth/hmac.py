@@ -14,7 +14,8 @@ class HMACAuthentication(BaseAuthentication):
         # Get the HMAC signature from the request headers.
         signature = request.headers.get("X-Signature")
         if not signature:
-            return None
+            logger.warning("Missing HMAC signature")
+            raise AuthenticationFailed("Missing signature")
 
         try:
             body = request.body.decode("utf-8")

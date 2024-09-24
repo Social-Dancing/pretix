@@ -32,6 +32,9 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under the License.
 
+import logging
+
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from pretix.api.models import OAuthAccessToken
@@ -42,6 +45,9 @@ from pretix.helpers.security import (
     Session2FASetupRequired, SessionInvalid, SessionPasswordChangeRequired,
     SessionReauthRequired, assert_session_valid,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class EventPermission(BasePermission):
@@ -181,3 +187,38 @@ class AnyAuthenticatedClientPermission(BasePermission):
                 return False
 
         return True
+
+
+class UserPermission(BasePermission):
+    """
+    Custom permission class tailored for specific Social Dancing API endpoints. This
+    permission verifies that the user making the request is the intended target of
+    the action.
+    """
+
+    def has_permission(self, request, view):
+        user_id = request.session.get('_auth_user_id')
+        if not user_id:
+            logger.warning("No '_auth_user_id' found in session.")
+            return False
+
+        target_user_id = request.data.get('targetUserId')
+        if not target_user_id:
+            logger.debug("No 'targetUserId' found in request body.")
+            return False
+
+        if str(user_id) != str(target_user_id):
+            logger.warning(
+                f"User ID {user_id} in session does not match target ID {target_user_id} in request body.")
+            return False
+
+        try:
+            user = User.objects.get(id=user_id)
+            # Attach the user to the request for future access.
+            request.user = user
+            logger.debug(
+                f"UserPermission: Valid user found for user_id {user_id}")
+            return True
+        except ObjectDoesNotExist:
+            logger.warning(f"UserPermission: Invalid user_id {user_id}")
+            return False

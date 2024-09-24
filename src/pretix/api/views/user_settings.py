@@ -39,7 +39,8 @@ class UserSettingsView(APIView):
             )
 
         except Exception as e:
-            logger.error("An error occurred saving user settings: %s", str(e))
+            logger.error(
+                "An error occurred updating user settings: %s", str(e))
             return JsonResponse(
                 {"message": "Failed to update user settings. Please try again later."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

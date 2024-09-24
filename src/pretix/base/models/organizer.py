@@ -234,6 +234,23 @@ class Organizer(LoggedModel):
             )
             i += 1
 
+    def user_can_modify_settings(self, user: User) -> bool:
+        """
+        Check if the given user is part of a team with permission
+        to change the organizer settings.
+
+        :param user: User instance to check
+        :return: True if the user has permission, False otherwise
+        """
+        teams = Team.objects.filter(organizer=self).prefetch_related('members')
+
+        for team in teams:
+            if team.members.filter(id=user.id).exists():
+                if team.can_change_organizer_settings:
+                    return True
+
+        return False
+
 
 def generate_invite_token():
     return get_random_string(length=32, allowed_chars=string.ascii_lowercase + string.digits)

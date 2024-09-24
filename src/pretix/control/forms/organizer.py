@@ -142,6 +142,8 @@ class OrganizerUpdateForm(OrganizerForm):
                 kwargs['initial'].setdefault('domain', initial_domain.domainname)
 
         super().__init__(*args, **kwargs)
+
+        self.fields['name'].widget.attrs['readonly'] = 'readonly'
         if not self.change_slug:
             self.fields['slug'].widget.attrs['readonly'] = 'readonly'
         if self.domain:

@@ -69,7 +69,6 @@ from django_scopes import scopes_disabled
 
 from pretix.base.models import Event, Organizer
 from pretix.helpers.cookies import set_cookie_without_samesite
-from pretix.helpers.security import assert_session_valid
 from pretix.multidomain.models import KnownDomain
 
 LOCAL_HOST_NAMES = ("testserver", "localhost")

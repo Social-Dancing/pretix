@@ -43,7 +43,7 @@ from pretix.api.views import cart
 from .views import (
     checkin, device, discount, event, exporters, idempotency, item, media,
     oauth, order, organizer, shredders, upload, user, version, voucher,
-    waitinglist, webhooks, logout, user_settings, organizer_settings
+    waitinglist, webhooks, socialdancing
 )
 
 router = routers.DefaultRouter()
@@ -159,9 +159,9 @@ urlpatterns = [
     re_path(r"^version$", version.VersionView.as_view(), name="version"),
 
     # Social Dancing APIs
-    re_path(r"^auth/logout/$", logout.LogoutView.as_view(), name="logout"),
-    re_path(r"^usersettings/$", user_settings.UserSettingsView.as_view(),
+    re_path(r"^auth/logout/$", socialdancing.LogoutView.as_view(), name="logout"),
+    re_path(r"^usersettings/$", socialdancing.UserSettingsView.as_view(),
             name="user-settings"),
-    re_path(r"^organizersettings/$", organizer_settings.OrganizerSettingsView.as_view(),
+    re_path(r"^organizersettings/$", socialdancing.OrganizerSettingsView.as_view(),
             name="organizer-settings"),
 ]

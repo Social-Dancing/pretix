@@ -160,6 +160,7 @@ urlpatterns = [
 
     # Social Dancing APIs
     re_path(r"^auth/logout/$", socialdancing.LogoutView.as_view(), name="logout"),
+    re_path(r"^auth/login/$", socialdancing.LoginView.as_view(), name="login"),
     re_path(r"^usersettings/$", socialdancing.UserSettingsView.as_view(),
             name="user-settings"),
     re_path(r"^organizersettings/$", socialdancing.OrganizerSettingsView.as_view(),

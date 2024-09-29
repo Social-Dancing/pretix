@@ -1,13 +1,16 @@
 import logging
 
+from django.conf import settings
 from django.http import JsonResponse
-from django.contrib.auth import logout as auth_logout
+from django.contrib.auth import logout as auth_logout, login as auth_login
+from django.contrib.auth import get_backends
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import BasePermission
 from pretix.api.auth.socialdancing import UserAuthentication, HMACAuthentication, UserPermission
 from pretix.base.auth import remove_sso_session_from_cache
 from pretix.base.models import Organizer, User
+from pretix.base.metrics import pretix_successful_logins
 from pretix.api.serializers.organizer import OrganizerSettingsSerializer
 
 
@@ -20,7 +23,10 @@ class PublicPermission(BasePermission):
 
 
 class LogoutView(APIView):
-    authentication_classes = [HMACAuthentication, UserAuthentication]
+    # TODO: Avoid using `UserAuthentication` for now, as not all users will have
+    # a Pretix session if they haven't accessed the ticketing platform yet.
+    # Implement it after the next release.
+    authentication_classes = [HMACAuthentication]
     permission_classes = [PublicPermission]
 
     def post(self, request, *args, **kwargs):
@@ -40,6 +46,28 @@ class LogoutView(APIView):
                 {"message": "Failed to log out. Please try again later."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class LoginView(APIView):
+    authentication_classes = [HMACAuthentication, UserAuthentication]
+    permission_classes = [PublicPermission]
+
+    def post(self, request, *args, **kwargs):
+        logger.debug(
+            f"Login request received for user {request.user.id} ({request.user.email})")
+
+        try:
+            pretix_successful_logins.inc(1)
+            backend = get_backends()[0]
+            request.user.backend = f'{backend.__module__}.{backend.__class__.__name__}'
+            auth_login(request, request.user, backend=request.user.backend)
+            request.session['pretix_auth_long_session'] = settings.PRETIX_LONG_SESSIONS
+            return JsonResponse({"message": "Successfully logged in"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"An error occurred during login: {str(e)}")
+            return JsonResponse({"message": "Failed to log in user {request.user.id} ({request.user.email}). Please try again later."},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class UserSettingsView(APIView):

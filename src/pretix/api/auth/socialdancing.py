@@ -8,6 +8,10 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import BasePermission
 from pretix.base.models import User, Organizer
+from pretix.base.auth import (
+    get_sso_session_cookie_key,
+    get_sso_session,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -45,30 +49,9 @@ class HMACAuthentication(BaseAuthentication):
         return None
 
 
-class UserAuthentication(BaseAuthentication):
-    def authenticate(self, request):
-        logger.debug("Authenticating user...")
-
-        user_id = request.session.get('_auth_user_id')
-        if not user_id:
-            logger.warning("No '_auth_user_id' found in session.")
-            raise AuthenticationFailed("User not authenticated.")
-
-        try:
-            user = User.objects.get(id=user_id)
-            # The method of an authentication class must return a tuple (user,
-            # auth) or None.
-            return (user, None)
-
-        except ObjectDoesNotExist:
-            logger.warning(
-                f"UserPermission: Invalid user_id {user_id}. User does not exist.")
-            raise AuthenticationFailed("User not found.")
-
-
 class UserPermission(BasePermission):
     """
-    Custom permission class tailored for specific Social Dancing API endpoints.
+    Custom permission class tailored for Social Dancing API endpoints.
     This permission verifies that the user making the request is the intended
     target of the action or has the necessary permissions on the target
     organizer.
@@ -103,3 +86,56 @@ class UserPermission(BasePermission):
             return False
 
         return True
+
+
+class UserAuthentication(BaseAuthentication):
+    """
+    Custom permission class tailored for Social Dancing API endpoints. This
+    class handles the user authentication process by checking for an existing
+    user session in Pretix and, if not found, it attempts to authenticate the
+    user via the Social Dancing session.
+    """
+
+    def authenticate(self, request):
+        logger.debug("Authenticating user...")
+
+        user_id = request.session.get('_auth_user_id')
+        user_email = None
+        if not user_id:
+            logger.debug(
+                "No '_auth_user_id' found in Pretix session. Checking Social Dancing session...")
+
+            cookie_key = get_sso_session_cookie_key(request)
+            sd_token = request.COOKIES.get(cookie_key)
+
+            if not sd_token:
+                logger.debug(
+                    "No SSO session token found. Authentication denied.")
+                raise AuthenticationFailed("User not authenticated.")
+
+            sd_session_data = get_sso_session(request)
+            if not sd_session_data:
+                logger.debug(
+                    "No SSO session data found. Authentication denied.")
+                raise AuthenticationFailed("User not authenticated.")
+
+            # Assumes that the user's email address is consistent between Social
+            # Dancing and Pretix. This synchronization is critical for correctly
+            # identifying and authenticating the user across both systems.
+            user_email = sd_session_data.get("user", {}).get("email")
+            if not user_email:
+                logger.debug(
+                    "No SSO related email found. Authentication denied.")
+                raise AuthenticationFailed("User not authenticated.")
+
+        try:
+            user = User.objects.get(
+                email=user_email) if user_email else User.objects.get(id=user_id)
+            # The method of an authentication class must return a tuple (user,
+            # auth) or None.
+            return (user, None)
+
+        except ObjectDoesNotExist:
+            logger.warning(
+                f"UserPermission: Invalid user_id {user_id} or user_email {user_email}. User does not exist.")
+            raise AuthenticationFailed("User not found.")

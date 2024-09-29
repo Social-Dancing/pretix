@@ -1,4 +1,5 @@
 import logging
+import json
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -10,6 +11,10 @@ from rest_framework.permissions import BasePermission
 from pretix.api.auth.socialdancing import UserAuthentication, HMACAuthentication, UserPermission
 from pretix.base.auth import remove_sso_session_from_cache
 from pretix.base.models import Organizer, User
+from pretix.base.auth import (
+    get_sso_session_cookie_key,
+    get_sso_session,
+)
 from pretix.base.metrics import pretix_successful_logins
 from pretix.api.serializers.organizer import OrganizerSettingsSerializer
 
@@ -137,5 +142,58 @@ class OrganizerSettingsView(APIView):
                 "An error occurred updating organizer settings: %s", str(e))
             return JsonResponse(
                 {"message": "Failed to update organizer settings. Please try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class CreateUser(APIView):
+    authentication_classes = [HMACAuthentication]
+    permission_classes = [PublicPermission]
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("Creating new user.")
+        cookie_key = get_sso_session_cookie_key(request)
+        sso_token = request.COOKIES.get(cookie_key)
+
+        if not sso_token:
+            logger.debug("No SSO session token found. Not creating user.")
+            return JsonResponse(
+                {"message": "Failed to create user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        sso_session_data = get_sso_session(request)
+        if not sso_session_data:
+            logger.debug("No SSO session data found. Not creating user.")
+            return JsonResponse(
+                {"message": "Failed to create user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_email = sso_session_data.get("user", {}).get("email")
+        if not user_email:
+            logger.debug("No SSO related email found. Not creating user.")
+            return JsonResponse(
+                {"message": "Failed to create user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            body_data = json.loads(request.body)
+            # The password will not be used, as authentication will be handled
+            # through Social Dancing.
+            user = User.objects.create_user(
+                email=user_email, password=User.objects.make_random_password(),
+                fullname=body_data.get('name')
+            )
+            return JsonResponse(
+                {"message": "Successfully created user in the Pretix system.", "pretixId": user.id}, status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            logger.error(
+                "An error occurred creating a user: %s", str(e))
+            return JsonResponse(
+                {"message": "Failed to create user."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

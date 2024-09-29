@@ -396,19 +396,19 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
 
         is_pretix_session_valid = self._validate_pretix_session(request)
         cookie_key = get_sso_session_cookie_key(request)
-        sd_token = request.COOKIES.get(cookie_key)
+        sso_token = request.COOKIES.get(cookie_key)
 
-        if not sd_token:
+        if not sso_token:
             return self._handle_invalid_session(request, is_pretix_session_valid)
 
-        sd_session_data = get_sso_session(request)
-        if not sd_session_data:
+        sso_session_data = get_sso_session(request)
+        if not sso_session_data:
             return self._handle_invalid_session(request, is_pretix_session_valid)
 
         # Assumes that the user's email address is consistent between Social
         # Dancing and Pretix. This synchronization is critical for correctly
         # identifying and authenticating the user across both systems.
-        email = sd_session_data.get("user", {}).get("email")
+        email = sso_session_data.get("user", {}).get("email")
         if not email:
             return self._handle_invalid_session(request, is_pretix_session_valid)
 
@@ -420,7 +420,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 return redirect(f"{settings.URLS_CORE_SYSTEM_URL}/admin")
         except User.DoesNotExist:
             logger.debug(f"Handling new user with email {email}")
-            return self._handle_new_user(request, sd_session_data)
+            return self._handle_new_user(request, sso_session_data)
 
         if not is_pretix_session_valid:
             logger.debug(f"Logging in user with email {email} via SSO")

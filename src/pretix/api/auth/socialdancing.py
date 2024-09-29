@@ -106,15 +106,15 @@ class UserAuthentication(BaseAuthentication):
                 "No '_auth_user_id' found in Pretix session. Checking Social Dancing session...")
 
             cookie_key = get_sso_session_cookie_key(request)
-            sd_token = request.COOKIES.get(cookie_key)
+            sso_token = request.COOKIES.get(cookie_key)
 
-            if not sd_token:
+            if not sso_token:
                 logger.debug(
                     "No SSO session token found. Authentication denied.")
                 raise AuthenticationFailed("User not authenticated.")
 
-            sd_session_data = get_sso_session(request)
-            if not sd_session_data:
+            sso_session_data = get_sso_session(request)
+            if not sso_session_data:
                 logger.debug(
                     "No SSO session data found. Authentication denied.")
                 raise AuthenticationFailed("User not authenticated.")
@@ -122,7 +122,7 @@ class UserAuthentication(BaseAuthentication):
             # Assumes that the user's email address is consistent between Social
             # Dancing and Pretix. This synchronization is critical for correctly
             # identifying and authenticating the user across both systems.
-            user_email = sd_session_data.get("user", {}).get("email")
+            user_email = sso_session_data.get("user", {}).get("email")
             if not user_email:
                 logger.debug(
                     "No SSO related email found. Authentication denied.")

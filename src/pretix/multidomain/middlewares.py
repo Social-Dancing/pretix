@@ -33,7 +33,6 @@
 # License for the specific language governing permissions and limitations under the License.
 
 import time
-import re
 import requests
 import logging
 from urllib.parse import urlparse
@@ -70,6 +69,7 @@ from django_scopes import scopes_disabled
 from pretix.base.models import Event, Organizer
 from pretix.helpers.cookies import set_cookie_without_samesite
 from pretix.multidomain.models import KnownDomain
+from pretix.helpers.urls import slugify_string
 
 LOCAL_HOST_NAMES = ("testserver", "localhost")
 logger = logging.getLogger(__name__)
@@ -289,15 +289,6 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
             request.session["pretix_auth_login_time"] = 0
         return redirect(redirect_url)
 
-    def _slugify_string(self, input_string):
-        # Remove special characters (keeping only alphanumeric characters and spaces).
-        cleaned_string = re.sub(r"[^a-zA-Z0-9\s]", "", input_string)
-        # Replace spaces with hyphens.
-        hyphenated_string = re.sub(r"\s+", "-", cleaned_string)
-        lowercased_string = hyphenated_string.lower()
-
-        return lowercased_string
-
     def _handle_new_user(self, request, sso_session_data):
         organizer = None
 
@@ -329,7 +320,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                 )
                 organization_name = response_data.get(
                     "organization", {}).get("name")
-                slug = self._slugify_string(organization_name)
+                slug = slugify_string(organization_name)
                 organizer = Organizer.objects.create(
                     name=organization_name, slug=slug)
                 t = Team.objects.create(

@@ -8,16 +8,17 @@ from django.contrib.auth import get_backends
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import BasePermission
+from pretix.helpers.urls import slugify_string
 from pretix.api.auth.socialdancing import UserAuthentication, HMACAuthentication, UserPermission
 from pretix.base.auth import remove_sso_session_from_cache
-from pretix.base.models import Organizer, User
+from pretix.base.models import Organizer, User, Team
 from pretix.base.auth import (
     get_sso_session_cookie_key,
     get_sso_session,
 )
 from pretix.base.metrics import pretix_successful_logins
 from pretix.api.serializers.organizer import OrganizerSettingsSerializer
-
+from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
@@ -195,5 +196,61 @@ class CreateUser(APIView):
                 "An error occurred creating a user: %s", str(e))
             return JsonResponse(
                 {"message": "Failed to create user."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class CreateOrganizer(APIView):
+    authentication_classes = [HMACAuthentication, UserAuthentication]
+    permission_classes = [PublicPermission]
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("Creating new organizer.")
+
+        try:
+            body_data = json.loads(request.body)
+            organization_name = body_data.get("name")
+
+            slug = slugify_string(organization_name)
+            organizer = Organizer.objects.create(
+                name=organization_name, slug=slug)
+            t = Team.objects.create(
+                organizer=organizer,
+                name=_("Administrators"),
+                all_events=True,
+                can_create_events=True,
+                can_change_teams=True,
+                can_manage_gift_cards=True,
+                can_change_organizer_settings=True,
+                can_change_event_settings=True,
+                can_change_items=True,
+                can_manage_customers=True,
+                can_manage_reusable_media=True,
+                can_view_orders=True,
+                can_change_orders=True,
+                can_view_vouchers=True,
+                can_change_vouchers=True,
+            )
+            t.members.add(request.user)
+
+            s = OrganizerSettingsSerializer(
+                instance=organizer.settings, data=request.data, partial=True,
+                organizer=organizer, context={
+                    'request': request
+                }
+            )
+            s.update(instance=organizer.settings, validated_data={
+                'contact_mail': body_data.get('emailContact', None),
+            })
+
+            return JsonResponse(
+                {"message": "Successfully created organizer.", "pretixId": organizer.id}, status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            logger.error(
+                "An error occurred creating new organizer: %s", str(e))
+            return JsonResponse(
+                {"message": "Failed to create organizer."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

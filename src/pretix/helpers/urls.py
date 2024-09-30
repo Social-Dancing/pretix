@@ -19,6 +19,8 @@
 # You should have received a copy of the GNU Affero General Public License along with this program.  If not, see
 # <https://www.gnu.org/licenses/>.
 #
+import re
+
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -29,3 +31,13 @@ def build_absolute_uri(urlname, args=None, kwargs=None):
     from pretix.multidomain import maindomain_urlconf
 
     return urljoin(settings.SITE_URL, reverse(urlname, args=args, kwargs=kwargs, urlconf=maindomain_urlconf))
+
+
+def slugify_string(input_string):
+    # Remove special characters (keeping only alphanumeric characters and spaces).
+    cleaned_string = re.sub(r"[^a-zA-Z0-9\s]", "", input_string)
+    # Replace spaces with hyphens.
+    hyphenated_string = re.sub(r"\s+", "-", cleaned_string)
+    lowercased_string = hyphenated_string.lower()
+
+    return lowercased_string

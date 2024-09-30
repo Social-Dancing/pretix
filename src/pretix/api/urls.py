@@ -168,4 +168,6 @@ urlpatterns = [
             name="organizer-settings"),
     re_path(r"^sd/createuser/$", socialdancing.CreateUser.as_view(),
             name="create-user"),
+    re_path(r"^sd/createorganizer/$", socialdancing.CreateOrganizer.as_view(),
+            name="create-organizer"),
 ]

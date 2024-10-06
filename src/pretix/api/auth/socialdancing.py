@@ -49,26 +49,19 @@ class HMACAuthentication(BaseAuthentication):
         return None
 
 
-class UserPermission(BasePermission):
+class OrganizerSettingsPermission(BasePermission):
     """
-    Custom permission class tailored for Social Dancing API endpoints.
-    This permission verifies that the user making the request is the intended
-    target of the action or has the necessary permissions on the target
-    organizer.
+    Custom permission class tailored for Social Dancing API endpoints. This
+    permission verifies that the user has the permissions to apply organizer
+    settings changes. 
     """
 
     def has_permission(self, request, view):
         user_id = request.user.id
-        target_user_id = request.data.get('targetUserId')
         target_organizer_id = request.data.get('targetOrganizerId')
 
-        if not target_user_id and not target_organizer_id:
+        if not target_organizer_id:
             logger.debug("No target IDs found in request body.")
-            return False
-
-        if target_user_id and str(user_id) != str(target_user_id):
-            logger.warning(
-                f"User ID {user_id} in session does not match target ID {target_user_id} in request body.")
             return False
 
         try:
@@ -77,12 +70,68 @@ class UserPermission(BasePermission):
             request.organizer = organizer
         except ObjectDoesNotExist:
             logger.warning(
-                f"UserPermission: Invalid organizer_id {target_organizer_id}. Organizer does not exist.")
+                f"OrganizerSettingsPermission: Invalid organizer_id {target_organizer_id}. Organizer does not exist.")
             return False
 
-        if request.organizer and not request.organizer.user_can_modify_settings(request.user):
+        if request.organizer and not request.organizer.user_can_modify_organizer_settings(request.user):
             logger.warning(
-                f"User of ID {user_id} does not have permission to change settings of organizer with ID {request.organizer.id}.")
+                f"User {user_id} ({request.user.email}) does not have permission to change settings of organizer {request.organizer.id} ({request.organizer.name}).")
+            return False
+
+        return True
+
+
+class TeamSettingsPermission(BasePermission):
+    """
+    Custom permission class tailored for Social Dancing API endpoints. This
+    permission verifies that the user has the permissions to apply organizer
+    settings changes. 
+    """
+
+    def has_permission(self, request, view):
+        user_id = request.user.id
+        target_organizer_id = request.data.get('targetOrganizerId')
+        target_team_id = request.data.get("targetTeamId")
+
+        if not target_team_id and not target_organizer_id:
+            logger.debug("No target IDs found in request body.")
+            return False
+
+        try:
+            organizer = Organizer.objects.get(
+                id=target_organizer_id) if target_organizer_id else None
+            request.organizer = organizer
+        except ObjectDoesNotExist:
+            logger.warning(
+                f"OrganizerSettingsPermission: Invalid organizer_id {target_organizer_id}. Organizer does not exist.")
+            return False
+
+        if request.organizer and not request.organizer.user_can_modify_team_settings(request.user):
+            logger.warning(
+                f"User {user_id} ({request.user.email}) does not have permission to modify or create teams in organizer {request.organizer.id} ({request.organizer.name}).")
+            return False
+
+        return True
+
+
+class UserSettingsPermission(BasePermission):
+    """
+    Custom permission class tailored for Social Dancing API endpoints. This
+    permission verifies that the user is making a request to modify its own
+    settings.
+    """
+
+    def has_permission(self, request, view):
+        user_id = request.user.id
+        target_user_id = request.data.get('targetUserId')
+
+        if not target_user_id:
+            logger.debug("No target IDs found in request body.")
+            return False
+
+        if target_user_id and str(user_id) != str(target_user_id):
+            logger.warning(
+                f"User ID {user_id} in session does not match target ID {target_user_id} in request body.")
             return False
 
         return True

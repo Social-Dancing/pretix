@@ -9,7 +9,11 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import BasePermission
 from pretix.helpers.urls import slugify_string
-from pretix.api.auth.socialdancing import UserAuthentication, HMACAuthentication, UserPermission
+from pretix.api.auth.socialdancing import (
+    UserAuthentication, HMACAuthentication,
+    UserSettingsPermission, OrganizerSettingsPermission,
+    TeamSettingsPermission
+)
 from pretix.base.auth import remove_sso_session_from_cache
 from pretix.base.models import Organizer, User, Team
 from pretix.base.auth import (
@@ -78,7 +82,7 @@ class LoginView(APIView):
 
 class UserSettingsView(APIView):
     authentication_classes = [HMACAuthentication, UserAuthentication]
-    permission_classes = [UserPermission]
+    permission_classes = [UserSettingsPermission]
 
     def post(self, request, *args, **kwargs):
         fullname = request.data.get('fullname', None)
@@ -115,7 +119,7 @@ class UserSettingsView(APIView):
 
 class OrganizerSettingsView(APIView):
     authentication_classes = [HMACAuthentication, UserAuthentication]
-    permission_classes = [UserPermission]
+    permission_classes = [OrganizerSettingsPermission]
 
     def post(self, request, *wargs, **kwargs):
         target_id = request.data.get('targetOrganizerId', None)
@@ -216,7 +220,13 @@ class CreateOrganizer(APIView):
                 name=organization_name, slug=slug)
             t = Team.objects.create(
                 organizer=organizer,
-                name=_("Administrators"),
+                # In Core, we also implement team-based access control. However,
+                # we support the concept of 'owners' (i.e., superusers) who are
+                # not part of any specific team within the organization. To
+                # ensure proper mapping between organization owners in Core and
+                # their organizer status in Pretix, we create a team with the
+                # reserved name '_owners' for this group of users.
+                name=_("_owners"),
                 all_events=True,
                 can_create_events=True,
                 can_change_teams=True,
@@ -252,5 +262,87 @@ class CreateOrganizer(APIView):
                 "An error occurred creating new organizer: %s", str(e))
             return JsonResponse(
                 {"message": "Failed to create organizer."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class CreateTeam(APIView):
+    authentication_classes = [HMACAuthentication, UserAuthentication]
+    permission_classes = [TeamSettingsPermission]
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("Creating new team.")
+
+        try:
+            body_data = json.loads(request.body)
+            team_name = body_data.get("name", False)
+            can_manage_organizer_settings = body_data.get(
+                "canManageOrganizerSettings", False)
+            can_manage_organizer_teams = body_data.get(
+                "canManageOrganizerTeams", False)
+            member_emails = body_data.get("memberEmails", [])
+
+            team = Team.objects.create(
+                organizer=request.organizer,
+                # In Core, we also implement team-based access control. However,
+                # we support the concept of 'owners' (i.e., superusers) who are
+                # not part of any specific team within the organization. To
+                # ensure proper mapping between organization owners in Core and
+                # their organizer status in Pretix, we create a team with the
+                # reserved name '_owners' for this group of users.
+                name=team_name,
+                all_events=True,
+                can_create_events=True,
+                can_change_teams=can_manage_organizer_teams,
+                can_manage_gift_cards=True,
+                can_change_organizer_settings=can_manage_organizer_settings,
+                can_change_event_settings=True,
+                can_change_items=True,
+                can_manage_customers=True,
+                can_manage_reusable_media=True,
+                can_view_orders=True,
+                can_change_orders=True,
+                can_view_vouchers=True,
+                can_change_vouchers=True,
+            )
+
+            for email in member_emails:
+                try:
+                    user = User.objects.get(email=email)
+                    team.members.add(user)
+                    logger.debug(
+                        f"Added user {user.id} ({user.email}) to the team ${team.id} ({team.name}).")
+
+                except User.DoesNotExist:
+                    logger.warning(
+                        f"User with email {email} does not exist. Creating user.")
+                    try:
+                        # Create a new user here as the user record will
+                        # eventually be in sync with the Core record once the
+                        # user is active in the Core system.
+                        user = User.objects.create_user(
+                            email=email, password=User.objects.make_random_password()
+                        )
+                        team.members.add(user)
+                        logger.debug(
+                            f"Created and added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
+
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to create and add user with email {email} to team {team.id} ({team.name}): {str(e)}")
+
+                except Exception as e:
+                    logger.error(
+                        f"Failed to add {user.id} ({user.email}) to the team ${team.id} ({team.name}): {str(e)}")
+
+            return JsonResponse(
+                {"message": "Successfully created team.", "pretixId": team.id}, status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            logger.error(
+                "An error occurred creating a new team: %s", str(e))
+            return JsonResponse(
+                {"message": f"Failed to create team \"{team_name}\"."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

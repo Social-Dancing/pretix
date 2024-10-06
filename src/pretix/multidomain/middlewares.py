@@ -325,7 +325,7 @@ class SocialDancingSsoMiddleware(BaseSessionMiddleware):
                     name=organization_name, slug=slug)
                 t = Team.objects.create(
                     organizer=organizer,
-                    name=_("Administrators"),
+                    name=_("_owners"),
                     all_events=True,
                     can_create_events=True,
                     can_change_teams=True,

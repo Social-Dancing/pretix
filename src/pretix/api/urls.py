@@ -170,4 +170,6 @@ urlpatterns = [
             name="create-user"),
     re_path(r"^sd/createorganizer/$", socialdancing.CreateOrganizer.as_view(),
             name="create-organizer"),
+    re_path(r"^sd/createteam/$", socialdancing.CreateTeam.as_view(),
+            name="create-team"),
 ]

@@ -286,7 +286,7 @@ class CreateTeam(APIView):
 
         try:
             body_data = json.loads(request.body)
-            team_name = body_data.get("name", False)
+            team_name = body_data.get("name", None)
             can_manage_organizer_settings = body_data.get(
                 "canManageOrganizerSettings", False)
             can_manage_organizer_teams = body_data.get(
@@ -355,6 +355,71 @@ class CreateTeam(APIView):
                 "An error occurred creating a new team: %s", str(e))
             return JsonResponse(
                 {"message": f"Failed to create team \"{team_name}\"."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class UpdateTeam(APIView):
+    authentication_classes = [HMACAuthentication, UserAuthentication]
+    permission_classes = [TeamSettingsPermission]
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("Updating team.")
+
+        try:
+            body_data = json.loads(request.body)
+            target_team_id = body_data.get("targetTeamId", None)
+            team_name = body_data.get("name", None)
+            can_manage_organizer_settings = body_data.get(
+                "canManageOrganizerSettings", False)
+            can_manage_organizer_teams = body_data.get(
+                "canManageOrganizerTeams", False)
+            emails_to_add = body_data.get("emailsToAdd", [])
+            emails_to_remove = body_data.get("emailsToRemove", [])
+
+            team = None
+            try:
+                team = Team.objects.get(id=target_team_id)
+            except Team.DoesNotExist:
+                return JsonResponse({"message": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            team.name = team_name
+            team.can_change_organizer_settings = can_manage_organizer_settings
+            team.can_change_teams = can_manage_organizer_teams
+            team.save()
+
+            for email in emails_to_add:
+                try:
+                    user = User.objects.get(email=email)
+                    team.members.add(user)
+                    logger.debug(
+                        f"Added user {user.id} ({user.email}) to the team {team.id} ({team.name}).")
+                except User.DoesNotExist:
+                    logger.debug(
+                        f"Created and added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
+                    user = User.objects.create_user(
+                        email=email, password=User.objects.make_random_password())
+                    team.members.add(user)
+                    logger.warning(
+                        f"Created and added user with email {email} to the team.")
+
+            for email in emails_to_remove:
+                try:
+                    user = User.objects.get(email=email)
+                    team.members.remove(user)
+                    logger.debug(
+                        f"Removed user {user.id} ({user.email}) from the team {team.id} ({team.name}).")
+                except User.DoesNotExist:
+                    logger.warning(
+                        f"User with email {email} does not exist. Cannot remove.")
+
+            return JsonResponse({"message": "Successfully updated team.", "teamId": team.id}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(
+                "An error occurred updating team: %s", str(e))
+            return JsonResponse(
+                {"message": f"Failed to update team \"{team_name}\"."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

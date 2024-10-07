@@ -771,7 +771,7 @@ class UserNotificationsEditView(TemplateView):
         return ctx
 
 
-class StartStaffSession(StaffMemberRequiredMixin, RecentAuthenticationRequiredMixin, TemplateView):
+class StartStaffSession(StaffMemberRequiredMixin, TemplateView):
     template_name = 'pretixcontrol/user/staff_session_start.html'
 
     def post(self, request, *args, **kwargs):

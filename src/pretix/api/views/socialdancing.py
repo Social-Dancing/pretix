@@ -184,6 +184,17 @@ class CreateUser(APIView):
             )
 
         try:
+            # Check if user already exists by email.
+            existing_user = User.objects.filter(email=user_email).first()
+            if existing_user:
+                logger.debug(
+                    f"User with email {user_email} already exists with ID {existing_user.id}.")
+                return JsonResponse(
+                    {"message": "User already exists.",
+                        "pretixId": existing_user.id},
+                    status=status.HTTP_200_OK
+                )
+
             body_data = json.loads(request.body)
             # The password will not be used, as authentication will be handled
             # through Social Dancing.

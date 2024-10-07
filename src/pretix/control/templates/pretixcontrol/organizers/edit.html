@@ -29,9 +29,9 @@
                         <legend>{% trans "General" %}</legend>
                         {% bootstrap_field form.name layout="control" %}
                         {% bootstrap_field form.slug layout="control" %}
-                        {% if form.domain %}
+                        {% comment %} {% if form.domain %}
                             {% bootstrap_field form.domain layout="control" %}
-                        {% endif %}
+                        {% endif %} {% endcomment %}
                         {% bootstrap_field sform.imprint_url layout="control" %}
                         {% comment %} {% bootstrap_field sform.contact_mail layout="control" %} {% endcomment %}
                         {% bootstrap_field sform.organizer_info_text layout="control" %}

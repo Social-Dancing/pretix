@@ -357,3 +357,36 @@ class CreateTeam(APIView):
                 {"message": f"Failed to create team \"{team_name}\"."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class DeleteTeam(APIView):
+    authentication_classes = [HMACAuthentication, UserAuthentication]
+    permission_classes = [TeamSettingsPermission]
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("Deleting team.")
+
+        try:
+            body_data = json.loads(request.body)
+            target_team_id = body_data.get("targetTeamId", None)
+            team = Team.objects.get(id=target_team_id)
+            team.delete()
+
+            return JsonResponse(
+                {"message": "Successfully deleted team."}, status=status.HTTP_200_OK
+            )
+
+        except Team.DoesNotExist:
+            logger.error(f"Team with id {target_team_id} does not exist.")
+            return JsonResponse(
+                {"message": f"Team with id {target_team_id} does not exist."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        except Exception as e:
+            logger.error(
+                "An error occurred deleting team: %s", str(e))
+            return JsonResponse(
+                {"message": f"Failed to delete team."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

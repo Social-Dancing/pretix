@@ -176,4 +176,6 @@ urlpatterns = [
             name="delete-team"),
     re_path(r"^sd/updateteam/$", socialdancing.UpdateTeam.as_view(),
             name="update-team"),
+    re_path(r"^sd/addteammember/$", socialdancing.AddTeamMember.as_view(),
+            name="add-team-member"),
 ]

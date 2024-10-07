@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import BasePermission
-from pretix.base.models import User, Organizer
+from pretix.base.models import User, Organizer, Team
 from pretix.base.auth import (
     get_sso_session_cookie_key,
     get_sso_session,
@@ -98,15 +98,29 @@ class TeamSettingsPermission(BasePermission):
             return False
 
         try:
-            organizer = Organizer.objects.get(
-                id=target_organizer_id) if target_organizer_id else None
-            request.organizer = organizer
+            if target_team_id:
+                team = Team.objects.get(id=target_team_id)
+                request.organizer = team.organizer
+            else:
+                organizer = Organizer.objects.get(id=target_organizer_id)
+                request.organizer = organizer
+
+        except Team.DoesNotExist:
+            logger.warning(
+                f"Invalid team_id {target_team_id}. Team does not exist.")
+            return False
+
+        except Organizer.DoesNotExist:
+            logger.warning(
+                f"Invalid organizer_id {target_organizer_id}. Organizer does not exist.")
+            return False
+
         except ObjectDoesNotExist:
             logger.warning(
                 f"OrganizerSettingsPermission: Invalid organizer_id {target_organizer_id}. Organizer does not exist.")
             return False
 
-        if request.organizer and not request.organizer.user_can_modify_team_settings(request.user):
+        if request.organizer and not request.organizer.user_can_modify_team_settings(request.user) or request.organizer is None:
             logger.warning(
                 f"User {user_id} ({request.user.email}) does not have permission to modify or create teams in organizer {request.organizer.id} ({request.organizer.name}).")
             return False

@@ -1,6 +1,7 @@
 import logging
 import json
 
+from django.db import transaction
 from django.conf import settings
 from django.http import JsonResponse
 from django.contrib.auth import logout as auth_logout, login as auth_login
@@ -293,58 +294,59 @@ class CreateTeam(APIView):
                 "canManageOrganizerTeams", False)
             member_emails = body_data.get("memberEmails", [])
 
-            team = Team.objects.create(
-                organizer=request.organizer,
-                # In Core, we also implement team-based access control. However,
-                # we support the concept of 'owners' (i.e., superusers) who are
-                # not part of any specific team within the organization. To
-                # ensure proper mapping between organization owners in Core and
-                # their organizer status in Pretix, we create a team with the
-                # reserved name '_owners' for this group of users.
-                name=team_name,
-                all_events=True,
-                can_create_events=True,
-                can_change_teams=can_manage_organizer_teams,
-                can_manage_gift_cards=True,
-                can_change_organizer_settings=can_manage_organizer_settings,
-                can_change_event_settings=True,
-                can_change_items=True,
-                can_manage_customers=True,
-                can_manage_reusable_media=True,
-                can_view_orders=True,
-                can_change_orders=True,
-                can_view_vouchers=True,
-                can_change_vouchers=True,
-            )
+            with transaction.atomic():
+                team = Team.objects.create(
+                    organizer=request.organizer,
+                    # In Core, we also implement team-based access control. However,
+                    # we support the concept of 'owners' (i.e., superusers) who are
+                    # not part of any specific team within the organization. To
+                    # ensure proper mapping between organization owners in Core and
+                    # their organizer status in Pretix, we create a team with the
+                    # reserved name '_owners' for this group of users.
+                    name=team_name,
+                    all_events=True,
+                    can_create_events=True,
+                    can_change_teams=can_manage_organizer_teams,
+                    can_manage_gift_cards=True,
+                    can_change_organizer_settings=can_manage_organizer_settings,
+                    can_change_event_settings=True,
+                    can_change_items=True,
+                    can_manage_customers=True,
+                    can_manage_reusable_media=True,
+                    can_view_orders=True,
+                    can_change_orders=True,
+                    can_view_vouchers=True,
+                    can_change_vouchers=True,
+                )
 
-            for email in member_emails:
-                try:
-                    user = User.objects.get(email=email)
-                    team.members.add(user)
-                    logger.debug(
-                        f"Added user {user.id} ({user.email}) to the team ${team.id} ({team.name}).")
-
-                except User.DoesNotExist:
-                    logger.warning(
-                        f"User with email {email} does not exist. Creating user.")
+                for email in member_emails:
                     try:
-                        # Create a new user here as the user record will
-                        # eventually be in sync with the Core record once the
-                        # user is active in the Core system.
-                        user = User.objects.create_user(
-                            email=email, password=User.objects.make_random_password()
-                        )
+                        user = User.objects.get(email=email)
                         team.members.add(user)
                         logger.debug(
-                            f"Created and added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
+                            f"Added user {user.id} ({user.email}) to team ${team.id} ({team.name}).")
+
+                    except User.DoesNotExist:
+                        logger.warning(
+                            f"User with email {email} does not exist. Creating user.")
+                        try:
+                            # Create a new user here as the user record will
+                            # eventually be in sync with the Core record once the
+                            # user is active in the Core system.
+                            user = User.objects.create_user(
+                                email=email, password=User.objects.make_random_password()
+                            )
+                            team.members.add(user)
+                            logger.debug(
+                                f"Created and added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
+
+                        except Exception as e:
+                            logger.error(
+                                f"Failed to create and add user with email {email} to team {team.id} ({team.name}): {str(e)}")
 
                     except Exception as e:
                         logger.error(
-                            f"Failed to create and add user with email {email} to team {team.id} ({team.name}): {str(e)}")
-
-                except Exception as e:
-                    logger.error(
-                        f"Failed to add {user.id} ({user.email}) to the team ${team.id} ({team.name}): {str(e)}")
+                            f"Failed to add {user.id} ({user.email}) to team ${team.id} ({team.name}): {str(e)}")
 
             return JsonResponse(
                 {"message": "Successfully created team.", "pretixId": team.id}, status=status.HTTP_200_OK
@@ -377,41 +379,42 @@ class UpdateTeam(APIView):
             emails_to_add = body_data.get("emailsToAdd", [])
             emails_to_remove = body_data.get("emailsToRemove", [])
 
-            team = None
-            try:
-                team = Team.objects.get(id=target_team_id)
-            except Team.DoesNotExist:
-                return JsonResponse({"message": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
-
-            team.name = team_name
-            team.can_change_organizer_settings = can_manage_organizer_settings
-            team.can_change_teams = can_manage_organizer_teams
-            team.save()
-
-            for email in emails_to_add:
+            with transaction.atomic():
+                team = None
                 try:
-                    user = User.objects.get(email=email)
-                    team.members.add(user)
-                    logger.debug(
-                        f"Added user {user.id} ({user.email}) to the team {team.id} ({team.name}).")
-                except User.DoesNotExist:
-                    logger.debug(
-                        f"Created and added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
-                    user = User.objects.create_user(
-                        email=email, password=User.objects.make_random_password())
-                    team.members.add(user)
-                    logger.warning(
-                        f"Created and added user with email {email} to the team.")
+                    team = Team.objects.get(id=target_team_id)
+                except Team.DoesNotExist:
+                    return JsonResponse({"message": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
 
-            for email in emails_to_remove:
-                try:
-                    user = User.objects.get(email=email)
-                    team.members.remove(user)
-                    logger.debug(
-                        f"Removed user {user.id} ({user.email}) from the team {team.id} ({team.name}).")
-                except User.DoesNotExist:
-                    logger.warning(
-                        f"User with email {email} does not exist. Cannot remove.")
+                team.name = team_name
+                team.can_change_organizer_settings = can_manage_organizer_settings
+                team.can_change_teams = can_manage_organizer_teams
+                team.save()
+
+                for email in emails_to_add:
+                    try:
+                        user = User.objects.get(email=email)
+                        team.members.add(user)
+                        logger.debug(
+                            f"Added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
+                    except User.DoesNotExist:
+                        logger.debug(
+                            f"Created and added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
+                        user = User.objects.create_user(
+                            email=email, password=User.objects.make_random_password())
+                        team.members.add(user)
+                        logger.warning(
+                            f"Created and added user with email {email} to the team.")
+
+                for email in emails_to_remove:
+                    try:
+                        user = User.objects.get(email=email)
+                        team.members.remove(user)
+                        logger.debug(
+                            f"Removed user {user.id} ({user.email}) from the team {team.id} ({team.name}).")
+                    except User.DoesNotExist:
+                        logger.warning(
+                            f"User with email {email} does not exist. Cannot remove.")
 
             return JsonResponse({"message": "Successfully updated team.", "teamId": team.id}, status=status.HTTP_200_OK)
 
@@ -420,6 +423,52 @@ class UpdateTeam(APIView):
                 "An error occurred updating team: %s", str(e))
             return JsonResponse(
                 {"message": f"Failed to update team \"{team_name}\"."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class AddTeamMember(APIView):
+    """
+    This endpoint is used when an invited user has finalized their signup in the Core system.
+
+    The user is not yet a member of the relevant team in Pretix, but during their session callback,
+    they perform the request to be added to the corresponding team. This special endpoint handles
+    adding that member to the team with reduced permission requirements.
+    """
+
+    authentication_classes = [HMACAuthentication, UserAuthentication]
+    permission_classes = [PublicPermission]
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("Adding invited user to team.")
+
+        try:
+            body_data = json.loads(request.body)
+            target_team_id = body_data.get("targetTeamId", None)
+
+            team = None
+            try:
+                team = Team.objects.get(id=target_team_id)
+            except Team.DoesNotExist:
+                return JsonResponse({"message": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            try:
+                user = User.objects.get(email=request.user.email)
+                team.members.add(user)
+                logger.debug(
+                    f"Added user {user.id} ({user.email}) to team {team.id} ({team.name}).")
+            except User.DoesNotExist:
+                logger.debug(
+                    f"Failed to add new team member. User not found")
+                return JsonResponse({"message": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            return JsonResponse({"message": "Successfully added new member."}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(
+                "An error occurred adding new team member: %s", str(e))
+            return JsonResponse(
+                {"message": f"Failed to add new team member."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

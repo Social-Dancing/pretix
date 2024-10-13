@@ -32,16 +32,22 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under the License.
 
+import logging
+
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from pretix.api.models import OAuthAccessToken
-from pretix.base.models import Device, Event, User
+from pretix.base.models import Device, Event, User, Organizer
 from pretix.base.models.auth import SuperuserPermissionSet
 from pretix.base.models.organizer import TeamAPIToken
 from pretix.helpers.security import (
     Session2FASetupRequired, SessionInvalid, SessionPasswordChangeRequired,
     SessionReauthRequired, assert_session_valid,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class EventPermission(BasePermission):

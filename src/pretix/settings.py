@@ -415,7 +415,6 @@ REST_FRAMEWORK = {
         'pretix.api.auth.device.DeviceTokenAuthentication',
         'pretix.api.auth.session.SessionAuthentication',
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-        'pretix.api.auth.hmac.HMACAuthentication',
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'drf_ujson.renderers.UJSONRenderer',

@@ -80,7 +80,6 @@ class UserSettingsForm(forms.ModelForm):
     class Meta:
         model = User
         fields = [
-            'fullname',
             'locale',
             'timezone',
             'email'

@@ -43,7 +43,7 @@ from pretix.api.views import cart
 from .views import (
     checkin, device, discount, event, exporters, idempotency, item, media,
     oauth, order, organizer, shredders, upload, user, version, voucher,
-    waitinglist, webhooks, logout
+    waitinglist, webhooks, socialdancing
 )
 
 router = routers.DefaultRouter()
@@ -159,5 +159,23 @@ urlpatterns = [
     re_path(r"^version$", version.VersionView.as_view(), name="version"),
 
     # Social Dancing APIs
-    re_path(r"^auth/logout/$", logout.LogoutView.as_view(), name="logout"),
+    re_path(r"^sd/auth/logout/$",
+            socialdancing.LogoutView.as_view(), name="logout"),
+    re_path(r"^sd/auth/login/$", socialdancing.LoginView.as_view(), name="login"),
+    re_path(r"^sd/usersettings/$", socialdancing.UserSettingsView.as_view(),
+            name="user-settings"),
+    re_path(r"^sd/organizersettings/$", socialdancing.OrganizerSettingsView.as_view(),
+            name="organizer-settings"),
+    re_path(r"^sd/createuser/$", socialdancing.CreateUser.as_view(),
+            name="create-user"),
+    re_path(r"^sd/createorganizer/$", socialdancing.CreateOrganizer.as_view(),
+            name="create-organizer"),
+    re_path(r"^sd/createteam/$", socialdancing.CreateTeam.as_view(),
+            name="create-team"),
+    re_path(r"^sd/deleteteam/$", socialdancing.DeleteTeam.as_view(),
+            name="delete-team"),
+    re_path(r"^sd/updateteam/$", socialdancing.UpdateTeam.as_view(),
+            name="update-team"),
+    re_path(r"^sd/addteammember/$", socialdancing.AddTeamMember.as_view(),
+            name="add-team-member"),
 ]

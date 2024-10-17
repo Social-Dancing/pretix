@@ -94,6 +94,17 @@ def get_sso_session(request):
 
         if session_data:
             logger.info(f"Cache hit for SSO session data with key {token}")
+
+            # In the Core system, there are two types of users: dancers and partners.
+            # Dancers should not have vendor access to the ticket shop, and they can be
+            # identified by the absence of an associated organization. Although there is an
+            # enum that indicates the user type, its underlying value may change at any
+            # time.
+            organization_id = session_data.get("organization", {}).get("id")
+            if organization_id is None:
+                logger.info(f"Session data missing organization.")
+                return None
+
             session_expiration_date = datetime.strptime(
                 session_data.get("expires", {}), "%Y-%m-%dT%H:%M:%S.%fZ"
             )
@@ -106,10 +117,12 @@ def get_sso_session(request):
             is_session_valid = session_expiration_date.replace(
                 tzinfo=pytz.UTC
             ) > datetime.now(pytz.UTC)
+
             if is_session_valid:
                 return session_data
             else:
-                logger.info(f"Session data stored with cache key '{token}' is expired.")
+                logger.info(
+                    f"Session data stored with cache key '{token}' is expired.")
 
         logger.info("Fetching session data from Core server...")
         response = requests.get(
@@ -123,7 +136,8 @@ def get_sso_session(request):
 
         return session_data
     except Exception as e:
-        logger.error(f"An error occurred while validating the SSO session token: {e}")
+        logger.error(
+            f"An error occurred while validating the SSO session token: {e}")
         return None
 
 

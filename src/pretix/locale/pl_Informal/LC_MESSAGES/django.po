@@ -10285,16 +10285,6 @@ msgctxt "person_name_salutation"
 msgid "Mr"
 msgstr ""
 
-#: pretix/base/settings.py:3428
-msgctxt "person_name_salutation"
-msgid "Ms"
-msgstr ""
-
-#: pretix/base/settings.py:3414
-msgctxt "person_name_salutation"
-msgid "Mr"
-msgstr ""
-
 #: pretix/base/settings.py:3415
 msgctxt "person_name_salutation"
 msgid "Mx"
@@ -27494,20 +27484,6 @@ msgid "PayPal via Stripe"
 msgstr ""
 
 #: pretix/plugins/stripe/payment.py:1836
-msgid "Swish via Stripe"
-msgstr ""
-
-#: pretix/plugins/stripe/payment.py:1841
-msgid ""
-"This payment method is available to users of the Revolut app. Please keep "
-"your login information available."
-msgstr ""
-
-#: pretix/plugins/stripe/payment.py:1807
-msgid "PayPal via Stripe"
-msgstr ""
-
-#: pretix/plugins/stripe/payment.py:1814
 msgid "Swish via Stripe"
 msgstr ""
 

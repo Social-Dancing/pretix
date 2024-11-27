@@ -27532,20 +27532,6 @@ msgstr ""
 msgid "Swish via Stripe"
 msgstr ""
 
-#: pretix/plugins/stripe/payment.py:1841
-msgid ""
-"This payment method is available to users of the Revolut app. Please keep "
-"your login information available."
-msgstr ""
-
-#: pretix/plugins/stripe/payment.py:1807
-msgid "PayPal via Stripe"
-msgstr ""
-
-#: pretix/plugins/stripe/payment.py:1814
-msgid "Swish via Stripe"
-msgstr ""
-
 #: pretix/plugins/stripe/payment.py:1819
 msgid ""
 "This payment method is available to users of the Swedish apps Swish and "

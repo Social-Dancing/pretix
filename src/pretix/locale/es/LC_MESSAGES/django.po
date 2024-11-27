@@ -19529,11 +19529,6 @@ msgstr ""
 msgid "Waiting customers"
 msgstr "Clientes en espera"
 
-#: pretix/control/templates/pretixcontrol/event/settings.html:377
-#, fuzzy
-msgid "Waiting customers"
-msgstr "Esperando"
-
 #: pretix/control/templates/pretixcontrol/event/settings.html:383
 msgid "Manage waiting list"
 msgstr "Gestionar la lista de espera"

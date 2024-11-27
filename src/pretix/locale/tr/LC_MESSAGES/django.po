@@ -12403,16 +12403,6 @@ msgctxt "person_name_salutation"
 msgid "Mr"
 msgstr ""
 
-#: pretix/base/settings.py:3428
-msgctxt "person_name_salutation"
-msgid "Ms"
-msgstr ""
-
-#: pretix/base/settings.py:3414
-msgctxt "person_name_salutation"
-msgid "Mr"
-msgstr ""
-
 #: pretix/base/settings.py:3415
 msgctxt "person_name_salutation"
 msgid "Mx"

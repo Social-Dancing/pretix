@@ -92,8 +92,30 @@ def get_sso_session(request):
         token = request.COOKIES.get(cookie_key)
         session_data = cache.get(token)
 
+        if session_data is None:
+            logger.info("Fetching session data from Core server...")
+            response = requests.get(
+                f"{settings.URLS_CORE_SYSTEM_URL}/api/auth/session",
+                cookies={cookie_key: token},
+            )
+
+            if response.status_code == 200:
+                session_data = response.json()
+                cache.set(token, session_data)
+
         if session_data:
             logger.info(f"Cache hit for SSO session data with key {token}")
+
+            # In the Core system, there are two types of users: dancers and
+            # partners. Dancers should not have vendor access to the ticket
+            # shop, and they can be identified by the absence of an associated
+            # organization or by the user type enum.
+            is_partner = session_data.get("user", {}).get("type") == "PARTNER"
+
+            if is_partner is False:
+                logger.info(f"User is not of type Partner")
+                return None
+
             session_expiration_date = datetime.strptime(
                 session_data.get("expires", {}), "%Y-%m-%dT%H:%M:%S.%fZ"
             )
@@ -106,24 +128,16 @@ def get_sso_session(request):
             is_session_valid = session_expiration_date.replace(
                 tzinfo=pytz.UTC
             ) > datetime.now(pytz.UTC)
+
             if is_session_valid:
                 return session_data
             else:
-                logger.info(f"Session data stored with cache key '{token}' is expired.")
+                logger.info(
+                    f"Session data stored with cache key '{token}' is expired.")
 
-        logger.info("Fetching session data from Core server...")
-        response = requests.get(
-            f"{settings.URLS_CORE_SYSTEM_URL}/api/auth/session",
-            cookies={cookie_key: token},
-        )
-
-        if response.status_code == 200:
-            session_data = response.json()
-            cache.set(token, session_data)
-
-        return session_data
     except Exception as e:
-        logger.error(f"An error occurred while validating the SSO session token: {e}")
+        logger.error(
+            f"An error occurred while validating the SSO session token: {e}")
         return None
 
 

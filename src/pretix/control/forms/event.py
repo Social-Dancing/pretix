@@ -369,13 +369,13 @@ class EventUpdateForm(I18nModelForm):
         self.fields['location'].widget.attrs['placeholder'] = _(
             'Sample Conference Center\nHeidelberg, Germany'
         )
-        if self.domain:
-            self.fields['domain'] = forms.CharField(
-                max_length=255,
-                label=_('Custom domain'),
-                required=False,
-                help_text=_('You need to configure the custom domain in the webserver beforehand.')
-            )
+        # if self.domain:
+        #     self.fields['domain'] = forms.CharField(
+        #         max_length=255,
+        #         label=_('Custom domain'),
+        #         required=False,
+        #         help_text=_('You need to configure the custom domain in the webserver beforehand.')
+        #     )
         self.fields['limit_sales_channels'].queryset = self.event.organizer.sales_channels.all()
         self.fields['limit_sales_channels'].widget = SalesChannelCheckboxSelectMultiple(self.event, attrs={
             'data-inverse-dependency': '<[name$=all_sales_channels]',

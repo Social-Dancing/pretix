@@ -146,13 +146,13 @@ class OrganizerUpdateForm(OrganizerForm):
         self.fields['name'].widget.attrs['readonly'] = 'readonly'
         if not self.change_slug:
             self.fields['slug'].widget.attrs['readonly'] = 'readonly'
-        if self.domain:
-            self.fields['domain'] = forms.CharField(
-                max_length=255,
-                label=_('Custom domain'),
-                required=False,
-                help_text=_('You need to configure the custom domain in the webserver beforehand.')
-            )
+        # if self.domain:
+        #     self.fields['domain'] = forms.CharField(
+        #         max_length=255,
+        #         label=_('Custom domain'),
+        #         required=False,
+        #         help_text=_('You need to configure the custom domain in the webserver beforehand.')
+        #     )
 
     def clean_domain(self):
         d = self.cleaned_data['domain']

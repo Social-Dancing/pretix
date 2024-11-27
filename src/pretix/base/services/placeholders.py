@@ -209,13 +209,24 @@ def get_best_name(position_or_address, parts=False):
 def base_placeholders(sender, **kwargs):
     from pretix.multidomain.urlreverse import build_absolute_uri
 
+    def _event_sample(event):
+        if event.has_subevents:
+            se = event.subevents.first()
+            if se:
+                return se.name
+        return event.name
+
     ph = [
         SimpleFunctionalTextPlaceholder(
             'event', ['event'], lambda event: event.name, lambda event: event.name
         ),
         SimpleFunctionalTextPlaceholder(
             'event', ['event_or_subevent'], lambda event_or_subevent: event_or_subevent.name,
-            lambda event_or_subevent: event_or_subevent.name
+            _event_sample,
+        ),
+        SimpleFunctionalTextPlaceholder(
+            'event_series_name', ['event', 'event_or_subevent'], lambda event, event_or_subevent: event.name,
+            lambda event: event.name
         ),
         SimpleFunctionalTextPlaceholder(
             'event_slug', ['event'], lambda event: event.slug, lambda event: event.slug
@@ -262,7 +273,7 @@ def base_placeholders(sender, **kwargs):
                 'presale:event.order.open', kwargs={
                     'order': order.code,
                     'secret': order.secret,
-                    'hash': order.email_confirm_hash()
+                    'hash': order.email_confirm_secret()
                 }
             ), lambda event: build_absolute_uri(
                 event,
@@ -443,7 +454,7 @@ def base_placeholders(sender, **kwargs):
                         'organizer': event.organizer.slug,
                         'order': order.code,
                         'secret': order.secret,
-                        'hash': order.email_confirm_hash(),
+                        'hash': order.email_confirm_secret(),
                     }),
                 )
                 for order in orders

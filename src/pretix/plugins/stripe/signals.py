@@ -46,8 +46,8 @@ from pretix.presale.signals import html_head, process_response
 def register_payment_provider(sender, **kwargs):
     from .payment import (
         StripeAffirm, StripeAlipay, StripeBancontact, StripeCC, StripeEPS,
-        StripeGiropay, StripeIdeal, StripeKlarna, StripeMultibanco,
-        StripePayPal, StripePrzelewy24, StripeRevolutPay,
+        StripeGiropay, StripeIdeal, StripeKlarna, StripeMobilePay,
+        StripeMultibanco, StripePayPal, StripePrzelewy24, StripeRevolutPay,
         StripeSEPADirectDebit, StripeSettingsHolder, StripeSofort, StripeSwish,
         StripeTwint, StripeWeChatPay,
     )
@@ -55,7 +55,7 @@ def register_payment_provider(sender, **kwargs):
     return [
         StripeSettingsHolder, StripeCC, StripeGiropay, StripeIdeal, StripeAlipay, StripeBancontact,
         StripeSofort, StripeEPS, StripeMultibanco, StripePrzelewy24, StripeRevolutPay, StripeWeChatPay,
-        StripeSEPADirectDebit, StripeAffirm, StripeKlarna, StripePayPal, StripeSwish, StripeTwint,
+        StripeSEPADirectDebit, StripeAffirm, StripeKlarna, StripePayPal, StripeSwish, StripeTwint, StripeMobilePay
     ]
 
 
@@ -71,7 +71,8 @@ def html_head_presale(sender, request=None, **kwargs):
             'event': sender,
             'settings': provider.settings,
             'testmode': (
-                (provider.settings.get('endpoint', 'live') == 'test' or sender.testmode)
+                (provider.settings.get('endpoint', 'live')
+                 == 'test' or sender.testmode)
                 and provider.settings.publishable_test_key
             )
         }
@@ -101,13 +102,17 @@ def pretixcontrol_logentry_display(sender, logentry, **kwargs):
     if event_type in plains:
         text = plains[event_type]
     elif event_type == 'charge.failed':
-        text = _('Charge failed. Reason: {}').format(data['data']['object']['failure_message'])
+        text = _('Charge failed. Reason: {}').format(
+            data['data']['object']['failure_message'])
     elif event_type == 'charge.dispute.created':
-        text = _('Dispute created. Reason: {}').format(data['data']['object']['reason'])
+        text = _('Dispute created. Reason: {}').format(
+            data['data']['object']['reason'])
     elif event_type == 'charge.dispute.updated':
-        text = _('Dispute updated. Reason: {}').format(data['data']['object']['reason'])
+        text = _('Dispute updated. Reason: {}').format(
+            data['data']['object']['reason'])
     elif event_type == 'charge.dispute.closed':
-        text = _('Dispute closed. Status: {}').format(data['data']['object']['status'])
+        text = _('Dispute closed. Status: {}').format(
+            data['data']['object']['status'])
 
     if text:
         return _('Stripe reported an event: {}').format(text)
@@ -196,7 +201,8 @@ def signal_process_response(sender, request: HttpRequest, response: HttpResponse
             url.url_name == "event.order.pay.change" or
             url.url_name == "event.order.pay" or
             (url.url_name == "event.checkout" and url.kwargs['step'] == "payment") or
-            (url.namespace == "plugins:stripe" and url.url_name in ["sca", "sca.return"])
+            (url.namespace == "plugins:stripe" and url.url_name in [
+             "sca", "sca.return"])
     ):
         if 'Content-Security-Policy' in response:
             h = _parse_csp(response['Content-Security-Policy'])

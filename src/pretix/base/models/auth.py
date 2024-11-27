@@ -241,7 +241,7 @@ class User(AbstractBaseUser, PermissionsMixin, LoggingMixin):
     REQUIRED_FIELDS = []
 
     email = models.EmailField(unique=True, db_index=True, null=True, blank=True,
-                              verbose_name=_('E-mail'), max_length=190)
+                              verbose_name=_('Email'), max_length=190)
     fullname = models.CharField(max_length=255, blank=True, null=True,
                                 verbose_name=_('Full name'))
     is_active = models.BooleanField(default=True,
@@ -571,13 +571,23 @@ class User(AbstractBaseUser, PermissionsMixin, LoggingMixin):
 
     def get_session_auth_hash(self):
         """
-        Return an HMAC that needs to
+        Return an HMAC that needs to be the same throughout the session, used e.g. for forced
+        logout after every password change.
+        """
+        return self._get_session_auth_hash(secret=settings.SECRET_KEY)
+
+    def get_session_auth_fallback_hash(self):
+        for fallback_secret in settings.SECRET_KEY_FALLBACKS:
+            yield self._get_session_auth_hash(secret=fallback_secret)
+
+    def _get_session_auth_hash(self, secret):
+        """
         """
         key_salt = "pretix.base.models.User.get_session_auth_hash"
         payload = self.password
         payload += self.email
         payload += self.session_token
-        return salted_hmac(key_salt, payload).hexdigest()
+        return salted_hmac(key_salt, payload, secret=secret).hexdigest()
 
     def update_session_token(self):
         self.session_token = generate_session_token()
@@ -654,3 +664,9 @@ class WebAuthnDevice(Device):
     @property
     def webauthnpubkey(self):
         return websafe_decode(self.pub_key)
+
+
+class HistoricPassword(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="historic_passwords")
+    created = models.DateTimeField(auto_now_add=True)
+    password = models.CharField(verbose_name=_("Password"), max_length=128)

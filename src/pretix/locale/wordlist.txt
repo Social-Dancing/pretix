@@ -9,6 +9,7 @@ acceptor
 analytics
 anonymize
 anonymized
+Auth
 authenticator
 automatical
 availabilities
@@ -84,6 +85,7 @@ MariaDB
 Mercado
 MerchantID
 Mifare
+MobilePay
 MOTO
 Multibanco
 Mx

@@ -111,7 +111,8 @@ def item_group_by_category(items):
     )
 
 
-def get_grouped_items(event, *, channel: SalesChannel, subevent=None, voucher=None, require_seat=0, base_qs=None, allow_addons=False,
+def get_grouped_items(event, *, channel: SalesChannel, subevent=None, voucher=None, require_seat=0, base_qs=None,
+                      allow_addons=False, allow_cross_sell=False,
                       quota_cache=None, filter_items=None, filter_categories=None, memberships=None,
                       ignore_hide_sold_out_for_item_ids=None):
     base_qs_set = base_qs is not None
@@ -193,7 +194,9 @@ def get_grouped_items(event, *, channel: SalesChannel, subevent=None, voucher=No
         )
     )
 
-    items = base_qs.using(settings.DATABASE_REPLICA).filter_available(channel=channel.identifier, voucher=voucher, allow_addons=allow_addons).select_related(
+    items = base_qs.using(settings.DATABASE_REPLICA).filter_available(
+        channel=channel.identifier, voucher=voucher, allow_addons=allow_addons, allow_cross_sell=allow_cross_sell
+    ).select_related(
         'category', 'tax_rule',  # for re-grouping
         'hidden_if_available',
     ).prefetch_related(
@@ -263,6 +266,8 @@ def get_grouped_items(event, *, channel: SalesChannel, subevent=None, voucher=No
 
     quotas_to_compute = []
     for item in items:
+        assert item.event_id == event.pk
+        item.event = event  # save a database query if this is looked up
         if item.has_variations:
             for v in item.available_variations:
                 for q in v._subevent_quotas:

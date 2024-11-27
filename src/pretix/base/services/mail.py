@@ -301,7 +301,7 @@ def mail(email: Union[str, Sequence[str]], subject: str, template: Union[str, La
                         order.event, 'presale:event.order.open', kwargs={
                             'order': order.code,
                             'secret': order.secret,
-                            'hash': order.email_confirm_hash()
+                            'hash': order.email_confirm_secret()
                         }
                     )
                 )
@@ -315,7 +315,7 @@ def mail(email: Union[str, Sequence[str]], subject: str, template: Union[str, La
                     body_html = renderer.render(content_plain, signature, raw_subject, order, position)
                 else:
                     # Backwards compatibility
-                    warnings.warn('E-mail renderer called without position argument because position argument is not '
+                    warnings.warn('Email renderer called without position argument because position argument is not '
                                   'supported.',
                                   DeprecationWarning)
                     body_html = renderer.render(content_plain, signature, raw_subject, order)

@@ -186,14 +186,23 @@ class EventListMixin:
         query = Q(is_public=True) & Q(live=True)
         qs = self.request.organizer.events.using(settings.DATABASE_REPLICA).filter(query)
         qs = qs.filter(Q(all_sales_channels=True) | Q(limit_sales_channels=self.request.sales_channel))
+
+        show_old = "old" in self.request.GET
+
+        subevent_filter = Q(subevents__active=True, subevents__is_public=True)
+        if not show_old:
+            subevent_filter &= Q(
+                Q(subevents__date_to__gte=now()) | Q(subevents__date_from__gte=now())
+            )
+
         qs = qs.annotate(
-            min_from=Min('subevents__date_from'),
-            min_to=Min('subevents__date_to'),
-            max_from=Max('subevents__date_from'),
-            max_to=Max('subevents__date_to'),
-            max_fromto=Greatest(Max('subevents__date_to'), Max('subevents__date_from')),
+            min_from=Min('subevents__date_from', filter=subevent_filter),
+            min_to=Min('subevents__date_to', filter=subevent_filter),
+            max_from=Max('subevents__date_from', filter=subevent_filter),
+            max_to=Max('subevents__date_to', filter=subevent_filter),
+            max_fromto=Greatest(Max('subevents__date_to', filter=subevent_filter), Max('subevents__date_from', filter=subevent_filter)),
         )
-        if "old" in self.request.GET:
+        if show_old:
             date_q = Q(date_to__lt=now()) | (Q(date_to__isnull=True) & Q(date_from__lt=now()))
             qs = qs.filter(
                 Q(Q(has_subevents=False) & date_q) | Q(
@@ -201,7 +210,7 @@ class EventListMixin:
                 )
             ).annotate(
                 order_to=Coalesce('max_fromto', 'max_to', 'max_from', 'date_to', 'date_from'),
-            ).order_by('-order_to')
+            ).order_by('-order_to', 'name', 'slug')
         else:
             date_q = Q(date_to__gte=now()) | (Q(date_to__isnull=True) & Q(date_from__gte=now()))
             qs = qs.filter(
@@ -210,7 +219,7 @@ class EventListMixin:
                 )
             ).annotate(
                 order_from=Coalesce('min_from', 'date_from'),
-            ).order_by('order_from')
+            ).order_by('order_from', 'name', 'slug')
         qs = Event.annotated(filter_qs_by_attr(
             qs, self.request, match_subevents_with_conditions=Q(active=True) & Q(is_public=True) & date_q
         ), self.request.sales_channel)

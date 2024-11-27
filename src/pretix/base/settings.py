@@ -550,7 +550,7 @@ DEFAULTS = {
         'serializer_class': serializers.BooleanField,
         'type': bool,
         'form_kwargs': dict(
-            label=_("Require a business addresses"),
+            label=_("Require a business address"),
             help_text=_('This will require users to enter a company name.'),
             widget=forms.CheckboxInput(attrs={'data-checkbox-dependency': '#id_invoice_address_required'}),
         )
@@ -571,13 +571,25 @@ DEFAULTS = {
         'form_class': I18nFormField,
         'serializer_class': I18nField,
         'form_kwargs': dict(
-            label=_("Custom recipient field"),
+            label=_("Custom recipient field label"),
             widget=I18nTextInput,
             help_text=_("If you want to add a custom text field, e.g. for a country-specific registration number, to "
                         "your invoice address form, please fill in the label here. This label will both be used for "
                         "asking the user to input their details as well as for displaying the value on the invoice. It will "
                         "be shown on the invoice below the headline. "
                         "The field will not be required.")
+        )
+    },
+    'invoice_address_custom_field_helptext': {
+        'default': '',
+        'type': LazyI18nString,
+        'form_class': I18nFormField,
+        'serializer_class': I18nField,
+        'form_kwargs': dict(
+            label=_("Custom recipient field help text"),
+            widget=I18nTextInput,
+            help_text=_("If you use the custom recipient field, you can specify a help text which will be displayed "
+                        "underneath the field. It will not be displayed on the invoice.")
         )
     },
     'invoice_address_vatid': {
@@ -1295,7 +1307,8 @@ DEFAULTS = {
         'form_kwargs': dict(
             label=_("Show event times and dates on the ticket shop"),
             help_text=_("If disabled, no date or time will be shown on the ticket shop's front page. This settings "
-                        "does however not affect the display in other locations."),
+                        "also affects a few other locations, however it should not be expected that the date of the "
+                        "event is shown nowhere to users."),
         )
     },
     'show_date_to': {

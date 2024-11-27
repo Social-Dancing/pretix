@@ -174,7 +174,8 @@ class BaseSenderView(EventPermissionRequiredMixin, FormView):
         return kwargs
 
     def form_invalid(self, form):
-        messages.error(self.request, _('We could not send the email. See below for details.'))
+        messages.error(self.request, _(
+            'We could not send the email. See below for details.'))
         return super().form_invalid(form)
 
     def form_valid(self, form):
@@ -183,7 +184,8 @@ class BaseSenderView(EventPermissionRequiredMixin, FormView):
 
         self.output = {}
         if not ocnt:
-            messages.error(self.request, _('There are no matching recipients for your selection.'))
+            messages.error(self.request, _(
+                'There are no matching recipients for your selection.'))
             self.request.POST = self.request.POST.copy()
             self.request.POST.pop("action", "")
             return self.get(self.request, *self.args, **self.kwargs)
@@ -198,10 +200,13 @@ class BaseSenderView(EventPermissionRequiredMixin, FormView):
                             escape(v.render_sample(self.request.event))
                         )
 
-                    subject = bleach.clean(form.cleaned_data['subject'].localize(l), tags=[])
-                    preview_subject = prefix_subject(self.request.event, format_map(subject, context_dict), highlight=True)
+                    subject = bleach.clean(
+                        form.cleaned_data['subject'].localize(l), tags=set())
+                    preview_subject = prefix_subject(
+                        self.request.event, format_map(subject, context_dict), highlight=True)
                     message = form.cleaned_data['message'].localize(l)
-                    preview_text = markdown_compile_email(format_map(message, context_dict))
+                    preview_text = markdown_compile_email(
+                        format_map(message, context_dict))
 
                     self.output[l] = {
                         'subject': _('Subject: {subject}').format(subject=preview_subject),
@@ -228,9 +233,11 @@ class BaseSenderView(EventPermissionRequiredMixin, FormView):
     def get_context_data(self, *args, **kwargs):
         ctx = super().get_context_data(*args, **kwargs)
         ctx['output'] = getattr(self, 'output', None)
-        ctx['match_size'] = self.describe_match_size(getattr(self, 'object_count', None))
+        ctx['match_size'] = self.describe_match_size(
+            getattr(self, 'object_count', None))
         ctx['form_fragment_name'] = self.form_fragment_name
-        ctx['is_preview'] = self.request.method == 'POST' and self.request.POST.get('action') == 'preview' and ctx['form'].is_valid()
+        ctx['is_preview'] = self.request.method == 'POST' and self.request.POST.get(
+            'action') == 'preview' and ctx['form'].is_valid()
         ctx['view_title'] = self.TITLE
         return ctx
 
@@ -267,13 +274,16 @@ class OrderSendView(BaseSenderView):
         if 'status' not in _cache_store:
             status = dict(Order.STATUS_CHOICE)
             status['overdue'] = _('pending with payment overdue')
-            status['valid_if_pending'] = _('payment pending but already confirmed')
-            status['na'] = _('payment pending (except unapproved or already confirmed)')
+            status['valid_if_pending'] = _(
+                'payment pending but already confirmed')
+            status['na'] = _(
+                'payment pending (except unapproved or already confirmed)')
             status['pa'] = _('approval pending')
             status['r'] = status['c']
             _cache_store['status'] = status
 
-        tpl = get_template('pretixplugins/sendmail/history_fragment_orders.html')
+        tpl = get_template(
+            'pretixplugins/sendmail/history_fragment_orders.html')
         logentry.pdata['sendto'] = [
             _cache_store['status'][s] for s in logentry.pdata['sendto']
         ]
@@ -286,7 +296,8 @@ class OrderSendView(BaseSenderView):
         ]
         if logentry.pdata.get('subevent'):
             try:
-                logentry.pdata['subevent_obj'] = logentry.event.subevents.get(pk=logentry.pdata['subevent']['id'])
+                logentry.pdata['subevent_obj'] = logentry.event.subevents.get(
+                    pk=logentry.pdata['subevent']['id'])
             except SubEvent.DoesNotExist:
                 pass
         return tpl.render({
@@ -306,7 +317,8 @@ class OrderSendView(BaseSenderView):
     def initial_from_logentry(self, logentry: LogEntry):
         initial = super().initial_from_logentry(logentry)
         if 'recipients' in logentry.parsed_data:
-            initial['recipients'] = logentry.parsed_data.get('recipients', 'orders')
+            initial['recipients'] = logentry.parsed_data.get(
+                'recipients', 'orders')
         if 'sendto' in logentry.parsed_data:
             initial['sendto'] = logentry.parsed_data.get('sendto')
         if 'items' in logentry.parsed_data:
@@ -321,16 +333,22 @@ class OrderSendView(BaseSenderView):
             initial['checkin_lists'] = self.request.event.checkin_lists.filter(
                 id__in=[c['id'] for c in logentry.parsed_data['checkin_lists']]
             )
-        initial['filter_checkins'] = logentry.parsed_data.get('filter_checkins', False)
-        initial['not_checked_in'] = logentry.parsed_data.get('not_checked_in', False)
+        initial['filter_checkins'] = logentry.parsed_data.get(
+            'filter_checkins', False)
+        initial['not_checked_in'] = logentry.parsed_data.get(
+            'not_checked_in', False)
         if logentry.parsed_data.get('subevents_from'):
-            initial['subevents_from'] = dateutil.parser.parse(logentry.parsed_data['subevents_from'])
+            initial['subevents_from'] = dateutil.parser.parse(
+                logentry.parsed_data['subevents_from'])
         if logentry.parsed_data.get('subevents_to'):
-            initial['subevents_to'] = dateutil.parser.parse(logentry.parsed_data['subevents_to'])
+            initial['subevents_to'] = dateutil.parser.parse(
+                logentry.parsed_data['subevents_to'])
         if logentry.parsed_data.get('created_from'):
-            initial['created_from'] = dateutil.parser.parse(logentry.parsed_data['created_from'])
+            initial['created_from'] = dateutil.parser.parse(
+                logentry.parsed_data['created_from'])
         if logentry.parsed_data.get('created_to'):
-            initial['created_to'] = dateutil.parser.parse(logentry.parsed_data['created_to'])
+            initial['created_to'] = dateutil.parser.parse(
+                logentry.parsed_data['created_to'])
         if logentry.parsed_data.get('attach_tickets'):
             initial['attach_tickets'] = logentry.parsed_data['attach_tickets']
         if logentry.parsed_data.get('attach_ical'):
@@ -348,13 +366,16 @@ class OrderSendView(BaseSenderView):
         qs = Order.objects.filter(event=self.request.event)
         statusq = Q(status__in=form.cleaned_data['sendto'])
         if 'overdue' in form.cleaned_data['sendto']:
-            statusq |= Q(status=Order.STATUS_PENDING, require_approval=False, valid_if_pending=False, expires__lt=now())
+            statusq |= Q(status=Order.STATUS_PENDING, require_approval=False,
+                         valid_if_pending=False, expires__lt=now())
         if 'pa' in form.cleaned_data['sendto']:
             statusq |= Q(status=Order.STATUS_PENDING, require_approval=True)
         if 'na' in form.cleaned_data['sendto']:
-            statusq |= Q(status=Order.STATUS_PENDING, require_approval=False, valid_if_pending=False)
+            statusq |= Q(status=Order.STATUS_PENDING,
+                         require_approval=False, valid_if_pending=False)
         if 'valid_if_pending' in form.cleaned_data['sendto']:
-            statusq |= Q(status=Order.STATUS_PENDING, require_approval=False, valid_if_pending=True)
+            statusq |= Q(status=Order.STATUS_PENDING,
+                         require_approval=False, valid_if_pending=True)
         orders = qs.filter(statusq)
 
         opq = OrderPosition.objects.filter(
@@ -375,7 +396,8 @@ class OrderSendView(BaseSenderView):
                 opq = opq.alias(
                     any_checkins=Exists(
                         Checkin.all.filter(
-                            Q(position_id=OuterRef('pk')) | Q(position__addon_to_id=OuterRef('pk')),
+                            Q(position_id=OuterRef('pk')) | Q(
+                                position__addon_to_id=OuterRef('pk')),
                             successful=True,
                             list__consider_tickets_used=True,
                         )
@@ -386,8 +408,10 @@ class OrderSendView(BaseSenderView):
                 opq = opq.alias(
                     matching_checkins=Exists(
                         Checkin.all.filter(
-                            Q(position_id=OuterRef('pk')) | Q(position__addon_to_id=OuterRef('pk')),
-                            list_id__in=[i.pk for i in form.cleaned_data.get('checkin_lists', [])],
+                            Q(position_id=OuterRef('pk')) | Q(
+                                position__addon_to_id=OuterRef('pk')),
+                            list_id__in=[i.pk for i in form.cleaned_data.get(
+                                'checkin_lists', [])],
                             successful=True
                         )
                     )
@@ -403,13 +427,17 @@ class OrderSendView(BaseSenderView):
         if form.cleaned_data.get('subevent'):
             opq = opq.filter(subevent=form.cleaned_data.get('subevent'))
         if form.cleaned_data.get('subevents_from'):
-            opq = opq.filter(subevent__date_from__gte=form.cleaned_data.get('subevents_from'))
+            opq = opq.filter(
+                subevent__date_from__gte=form.cleaned_data.get('subevents_from'))
         if form.cleaned_data.get('subevents_to'):
-            opq = opq.filter(subevent__date_from__lt=form.cleaned_data.get('subevents_to'))
+            opq = opq.filter(
+                subevent__date_from__lt=form.cleaned_data.get('subevents_to'))
         if form.cleaned_data.get('created_from'):
-            opq = opq.filter(order__datetime__gte=form.cleaned_data.get('created_from'))
+            opq = opq.filter(
+                order__datetime__gte=form.cleaned_data.get('created_from'))
         if form.cleaned_data.get('created_to'):
-            opq = opq.filter(order__datetime__lt=form.cleaned_data.get('created_to'))
+            opq = opq.filter(
+                order__datetime__lt=form.cleaned_data.get('created_to'))
 
         # pk__in turns out to be faster than Exists(subquery) in many cases since we often filter on a large subset
         # of orderpositions
@@ -429,6 +457,9 @@ class OrderSendView(BaseSenderView):
         kwargs.update({
             'recipients': form.cleaned_data['recipients'],
             'items': [i.pk for i in form.cleaned_data.get('items')],
+            'subevent': form.cleaned_data['subevent'].pk if form.cleaned_data.get('subevent') else None,
+            'subevents_from': form.cleaned_data.get('subevents_from'),
+            'subevents_to': form.cleaned_data.get('subevents_to'),
             'not_checked_in': form.cleaned_data.get('not_checked_in'),
             'checkin_lists': [i.pk for i in form.cleaned_data.get('checkin_lists')],
             'filter_checkins': form.cleaned_data.get('filter_checkins'),
@@ -456,13 +487,15 @@ class WaitinglistSendView(BaseSenderView):
                 i.pk: str(i) for i in logentry.event.items.all()
             }
 
-        tpl = get_template('pretixplugins/sendmail/history_fragment_waitinglist.html')
+        tpl = get_template(
+            'pretixplugins/sendmail/history_fragment_waitinglist.html')
         logentry.pdata['items'] = [
             _cache_store['itemcache'].get(i['id'], '?') for i in logentry.pdata.get('items', [])
         ]
         if logentry.pdata.get('subevent'):
             try:
-                logentry.pdata['subevent_obj'] = logentry.event.subevents.get(pk=logentry.pdata['subevent']['id'])
+                logentry.pdata['subevent_obj'] = logentry.event.subevents.get(
+                    pk=logentry.pdata['subevent']['id'])
             except SubEvent.DoesNotExist:
                 pass
         return tpl.render({
@@ -486,9 +519,11 @@ class WaitinglistSendView(BaseSenderView):
                 id__in=[a['id'] for a in logentry.parsed_data['items']]
             )
         if logentry.parsed_data.get('subevents_from'):
-            initial['subevents_from'] = dateutil.parser.parse(logentry.parsed_data['subevents_from'])
+            initial['subevents_from'] = dateutil.parser.parse(
+                logentry.parsed_data['subevents_from'])
         if logentry.parsed_data.get('subevents_to'):
-            initial['subevents_to'] = dateutil.parser.parse(logentry.parsed_data['subevents_to'])
+            initial['subevents_to'] = dateutil.parser.parse(
+                logentry.parsed_data['subevents_to'])
         if logentry.parsed_data.get('subevent'):
             try:
                 initial['subevent'] = self.request.event.subevents.get(
@@ -505,9 +540,11 @@ class WaitinglistSendView(BaseSenderView):
         if form.cleaned_data.get('subevent'):
             qs = qs.filter(subevent=form.cleaned_data.get('subevent'))
         if form.cleaned_data.get('subevents_from'):
-            qs = qs.filter(subevent__date_from__gte=form.cleaned_data.get('subevents_from'))
+            qs = qs.filter(
+                subevent__date_from__gte=form.cleaned_data.get('subevents_from'))
         if form.cleaned_data.get('subevents_to'):
-            qs = qs.filter(subevent__date_from__lt=form.cleaned_data.get('subevents_to'))
+            qs = qs.filter(
+                subevent__date_from__lt=form.cleaned_data.get('subevents_to'))
 
         return qs
 
@@ -596,7 +633,8 @@ class CreateRule(EventPermissionRequiredMixin, CreateView):
         return kwargs
 
     def form_invalid(self, form):
-        messages.error(self.request, _('We could not save your changes. See below for details.'))
+        messages.error(self.request, _(
+            'We could not save your changes. See below for details.'))
         return super().form_invalid(form)
 
     def form_valid(self, form):
@@ -613,10 +651,13 @@ class CreateRule(EventPermissionRequiredMixin, CreateView):
                             escape(v.render_sample(self.request.event))
                         )
 
-                    subject = bleach.clean(form.cleaned_data['subject'].localize(l), tags=[])
-                    preview_subject = prefix_subject(self.request.event, format_map(subject, context_dict), highlight=True)
+                    subject = bleach.clean(
+                        form.cleaned_data['subject'].localize(l), tags=set())
+                    preview_subject = prefix_subject(
+                        self.request.event, format_map(subject, context_dict), highlight=True)
                     template = form.cleaned_data['template'].localize(l)
-                    preview_text = markdown_compile_email(format_map(template, context_dict))
+                    preview_text = markdown_compile_email(
+                        format_map(template, context_dict))
 
                     self.output[l] = {
                         'subject': _('Subject: {subject}').format(subject=preview_subject),
@@ -652,7 +693,8 @@ class UpdateRule(EventPermissionRequiredMixin, UpdateView):
         return get_object_or_404(
             Rule.objects.annotate(
                 total_mails=Count('scheduledmail'),
-                sent_mails=Count('scheduledmail', filter=Q(scheduledmail__state=ScheduledMail.STATE_COMPLETED)),
+                sent_mails=Count('scheduledmail', filter=Q(
+                    scheduledmail__state=ScheduledMail.STATE_COMPLETED)),
             ),
             event=self.request.event,
             id=self.kwargs['rule']
@@ -673,7 +715,8 @@ class UpdateRule(EventPermissionRequiredMixin, UpdateView):
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        messages.error(self.request, _('We could not save your changes. See below for details.'))
+        messages.error(self.request, _(
+            'We could not save your changes. See below for details.'))
         return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
@@ -689,10 +732,13 @@ class UpdateRule(EventPermissionRequiredMixin, UpdateView):
                         escape(v.render_sample(self.request.event))
                     )
 
-                subject = bleach.clean(self.object.subject.localize(lang), tags=[])
-                preview_subject = prefix_subject(self.request.event, format_map(subject, placeholders), highlight=True)
+                subject = bleach.clean(
+                    self.object.subject.localize(lang), tags=set())
+                preview_subject = prefix_subject(
+                    self.request.event, format_map(subject, placeholders), highlight=True)
                 template = self.object.template.localize(lang)
-                preview_text = markdown_compile_email(format_map(template, placeholders))
+                preview_text = markdown_compile_email(
+                    format_map(template, placeholders))
 
                 o[lang] = {
                     'subject': _('Subject: {subject}'.format(subject=preview_subject)),
@@ -712,7 +758,8 @@ class ListRules(EventPermissionRequiredMixin, PaginationMixin, ListView):
     def get_queryset(self):
         return self.request.event.sendmail_rules.annotate(
             total_mails=Count('scheduledmail'),
-            sent_mails=Count('scheduledmail', filter=Q(scheduledmail__state=ScheduledMail.STATE_COMPLETED)),
+            sent_mails=Count('scheduledmail', filter=Q(
+                scheduledmail__state=ScheduledMail.STATE_COMPLETED)),
             last_execution=Max(
                 'scheduledmail__computed_datetime',
                 filter=Q(scheduledmail__state=ScheduledMail.STATE_COMPLETED)
@@ -754,7 +801,8 @@ class DeleteRule(EventPermissionRequiredMixin, DeleteView):
                                       })
 
         self.object.delete()
-        messages.success(self.request, _('The selected rule has been deleted.'))
+        messages.success(self.request, _(
+            'The selected rule has been deleted.'))
         return HttpResponseRedirect(success_url)
 
 

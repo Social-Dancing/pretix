@@ -4,6 +4,7 @@ AES
 Absenderadresse
 Absenderinformation
 Absendername
+ABGEKÜNDIGT
 Admin
 Adminbereich
 Affirm
@@ -25,6 +26,7 @@ Ausgangsscans
 ausgeklappt
 ausgecheckt
 auswahl
+Auth
 Authentication
 Authenticator
 Authentifizierungsmechanismus
@@ -36,6 +38,7 @@ Bancontact
 BankID
 Banking
 barcodes
+Baskisch
 Bcc
 BCC
 Beispielevent
@@ -79,6 +82,7 @@ Connect
 Consent
 Copyleft
 Cronjob
+Cross
 csv
 Customer
 CZK
@@ -194,6 +198,7 @@ Mitgliedschafts
 Mitgliedschaftsdauer
 min
 Mo
+MobilePay
 MOTO
 Multibanco
 MwSt
@@ -277,6 +282,7 @@ Scopes
 sechsstelligen
 Secret
 Security
+Selling
 SEPA
 Shirts
 Signaturverfahren

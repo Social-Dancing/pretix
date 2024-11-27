@@ -88,16 +88,20 @@ class SalesChannelMigrationMixin:
             }
 
             if data.get("all_sales_channels") and set(data["sales_channels"]) != all_channels:
-                raise ValidationError(
-                    "If 'all_sales_channels' is set, the legacy attribute 'sales_channels' must not be set or set to "
-                    "the list of all sales channels."
-                )
+                raise ValidationError({
+                    "limit_sales_channels": [
+                        "If 'all_sales_channels' is set, the legacy attribute 'sales_channels' must not be set or set to "
+                        "the list of all sales channels."
+                    ]
+                })
 
             if data.get("limit_sales_channels") and set(data["sales_channels"]) != set(data["limit_sales_channels"]):
-                raise ValidationError(
-                    "If 'limit_sales_channels' is set, the legacy attribute 'sales_channels' must not be set or set to "
-                    "the same list."
-                )
+                raise ValidationError({
+                    "limit_sales_channels": [
+                        "If 'limit_sales_channels' is set, the legacy attribute 'sales_channels' must not be set or set to "
+                        "the same list."
+                    ]
+                })
 
             if data["sales_channels"] == all_channels:
                 data["all_sales_channels"] = True
@@ -106,6 +110,10 @@ class SalesChannelMigrationMixin:
                 data["all_sales_channels"] = False
                 data["limit_sales_channels"] = data["sales_channels"]
             del data["sales_channels"]
+
+        if data.get("all_sales_channels"):
+            data["limit_sales_channels"] = []
+
         return super().to_internal_value(data)
 
     def to_representation(self, value):

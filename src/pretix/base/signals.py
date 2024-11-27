@@ -367,7 +367,7 @@ validate_cart_addons = EventPluginSignal()
 Arguments: ``addons``, ``base_position``, ``iao``
 
 This signal is sent when a user tries to select a combination of addons. In contrast to
- ``validate_cart``, this is executed before the cart is actually modified. You are passed
+``validate_cart``, this is executed before the cart is actually modified. You are passed
 an argument ``addons`` containing a dict of ``(item, variation or None) → count`` tuples as well
 as the ``ItemAddOn`` object as the argument ``iao`` and the base cart position as
 ``base_position``.
@@ -837,4 +837,13 @@ This signal is sent out every time a customer signs in. The ``customer`` object
 is given as the first argument.
 
 The ``sender`` keyword argument will contain the organizer.
+"""
+
+device_info_updated = django.dispatch.Signal()
+"""
+Arguments: ``old_device``, ``new_device``
+
+This signal is sent out each time the information for a Device is modified.
+Both the original and updated versions of the Device are included to allow
+receivers to see what has been updated.
 """

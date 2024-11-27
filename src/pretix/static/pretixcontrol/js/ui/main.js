@@ -378,6 +378,7 @@ var form_handlers = function (el) {
             dependency = findDependency($(this).attr("data-display-dependency"), this),
             update = function (ev) {
                 var enabled = dependency.toArray().some(function(d) {
+                    if (d.disabled) return false;
                     if (d.type === 'checkbox' || d.type === 'radio') {
                         return d.checked;
                     } else if (d.type === 'select-one') {
@@ -397,6 +398,9 @@ var form_handlers = function (el) {
                     enabled = !enabled;
                 }
                 var $toggling = dependent;
+                if (dependent.attr("data-disable-dependent")) {
+                    $toggling.attr('disabled', !enabled).trigger("change");
+                }
                 if (dependent.get(0).tagName.toLowerCase() !== "div") {
                     $toggling = dependent.closest('.form-group');
                 }
@@ -411,8 +415,9 @@ var form_handlers = function (el) {
                 }
             };
         update();
-        dependency.closest('.form-group').find('[name=' + dependency.attr("name") + ']').on("change", update);
-        dependency.closest('.form-group').find('[name=' + dependency.attr("name") + ']').on("dp.change", update);
+        dependency.each(function() {
+            $(this).closest('.form-group').find('[name=' + $(this).attr("name") + ']').on("change dp.change", update);
+        })
     });
 
     el.find("input[data-required-if], select[data-required-if], textarea[data-required-if]").each(function () {
@@ -550,6 +555,16 @@ var form_handlers = function (el) {
     el.find('.select2-static').select2({
         theme: "bootstrap",
         language: $("body").attr("data-select2-locale"),
+    });
+
+    el.find('[data-model-select2=json_script]').each(function() {
+        const selectedValue = this.value;
+        this.replaceChildren();
+        $(this).select2({
+            theme: "bootstrap",
+            language: $("body").attr("data-select2-locale"),
+            data: JSON.parse($(this.getAttribute('data-select2-src')).text()),
+        }).val(selectedValue).trigger('change');
     });
 
     el.find('input[data-typeahead-url]').each(function () {

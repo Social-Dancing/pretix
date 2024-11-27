@@ -29,6 +29,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.deconstruct import deconstructible
 from django.utils.formats import localize
+from django.utils.functional import lazy
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _, pgettext
 from i18nfield.fields import I18nCharField
 from i18nfield.strings import LazyI18nString
@@ -120,6 +122,8 @@ EU_CURRENCIES = {
 }
 VAT_ID_COUNTRIES = EU_COUNTRIES | {'CH', 'NO'}
 
+format_html_lazy = lazy(format_html, str)
+
 
 def is_eu_country(cc):
     cc = str(cc)
@@ -193,11 +197,17 @@ class TaxRule(LoggedModel):
     eu_reverse_charge = models.BooleanField(
         verbose_name=_("Use EU reverse charge taxation rules"),
         default=False,
-        help_text=_("Not recommended. Most events will NOT be qualified for reverse charge since the place of "
-                    "taxation is the location of the event. This option disables charging VAT for all customers "
-                    "outside the EU and for business customers in different EU countries who entered a valid EU VAT "
-                    "ID. Only enable this option after consulting a tax counsel. No warranty given for correct tax "
-                    "calculation. USE AT YOUR OWN RISK.")
+        help_text=format_html_lazy(
+            '<span class="label label-warning" data-toggle="tooltip" title="{}">{}</span> {}',
+            _('This feature will be removed in the future as it does not handle VAT for non-business customers in '
+              'other EU countries in a way that works for all organizers. Use custom rules instead.'),
+            _('DEPRECATED'),
+            _("Not recommended. Most events will NOT be qualified for reverse charge since the place of "
+              "taxation is the location of the event. This option disables charging VAT for all customers "
+              "outside the EU and for business customers in different EU countries who entered a valid EU VAT "
+              "ID. Only enable this option after consulting a tax counsel. No warranty given for correct tax "
+              "calculation. USE AT YOUR OWN RISK.")
+        ),
     )
     home_country = FastCountryField(
         verbose_name=_('Merchant country'),
@@ -294,10 +304,24 @@ class TaxRule(LoggedModel):
                     subtract_from_gross = Decimal('0.00')
                 rate = adjust_rate
 
+        def _limit_subtract(base_price, subtract_from_gross):
+            if not subtract_from_gross:
+                return base_price
+            if base_price >= Decimal('0.00'):
+                # For positive prices, make sure they don't go negative because of bundles
+                return max(Decimal('0.00'), base_price - subtract_from_gross)
+            else:
+                # If the price is already negative, we don't really care any more
+                return base_price - subtract_from_gross
+
         if rate == Decimal('0.00'):
+            gross = _limit_subtract(base_price, subtract_from_gross)
             return TaxedPrice(
-                net=base_price - subtract_from_gross, gross=base_price - subtract_from_gross, tax=Decimal('0.00'),
-                rate=rate, name=self.name
+                net=gross,
+                gross=gross,
+                tax=Decimal('0.00'),
+                rate=rate,
+                name=self.name,
             )
 
         if base_price_is == 'auto':
@@ -307,19 +331,14 @@ class TaxRule(LoggedModel):
                 base_price_is = 'net'
 
         if base_price_is == 'gross':
-            if base_price >= Decimal('0.00'):
-                # For positive prices, make sure they don't go negative because of bundles
-                gross = max(Decimal('0.00'), base_price - subtract_from_gross)
-            else:
-                # If the price is already negative, we don't really care any more
-                gross = base_price - subtract_from_gross
+            gross = _limit_subtract(base_price, subtract_from_gross)
             net = round_decimal(gross - (gross * (1 - 100 / (100 + rate))),
                                 currency)
         elif base_price_is == 'net':
             net = base_price
             gross = round_decimal((net * (1 + rate / 100)), currency)
             if subtract_from_gross:
-                gross -= subtract_from_gross
+                gross = _limit_subtract(gross, subtract_from_gross)
                 net = round_decimal(gross - (gross * (1 - 100 / (100 + rate))),
                                     currency)
         else:

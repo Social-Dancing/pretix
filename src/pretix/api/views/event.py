@@ -297,7 +297,8 @@ class EventViewSet(viewsets.ModelViewSet):
 
             if 'all_sales_channels' in serializer.validated_data and 'sales_channels' in serializer.validated_data:
                 new_event.all_sales_channels = serializer.validated_data['all_sales_channels']
-                new_event.limit_sales_channels.set(serializer.validated_data['limit_sales_channels'])
+                if not new_event.all_sales_channels:
+                    new_event.limit_sales_channels.set(serializer.validated_data['limit_sales_channels'])
         else:
             serializer.instance.set_defaults()
 
@@ -370,7 +371,7 @@ with scopes_disabled():
 
         class Meta:
             model = SubEvent
-            fields = ['active', 'event__live']
+            fields = ['is_public', 'active', 'event__live']
 
         def ends_after_qs(self, queryset, name, value):
             expr = Q(

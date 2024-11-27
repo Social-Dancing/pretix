@@ -213,7 +213,13 @@ class DatetimeColumnMixin:
             except (ValueError, TypeError):
                 pass
         else:
-            raise ValidationError(_("Could not parse {value} as a date and time.").format(value=value))
+            try:
+                d = datetime.datetime.fromisoformat(value)
+                if not d.tzinfo:
+                    d = d.replace(tzinfo=self.timezone)
+                return d
+            except (ValueError, TypeError):
+                raise ValidationError(_("Could not parse {value} as a date and time.").format(value=value))
 
 
 class DecimalColumnMixin:
@@ -250,6 +256,9 @@ class SubeventColumnMixin:
         ]
 
     def clean(self, value, previous_values):
+        if not value:
+            return None
+
         if value in self._subevent_cache:
             return self._subevent_cache[value]
 

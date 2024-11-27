@@ -36,6 +36,7 @@ import time
 import traceback
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.management.base import BaseCommand
 from django.dispatch.dispatcher import NO_RECEIVERS
 
@@ -50,17 +51,23 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--tasks', action='store', type=str, help='Only execute the tasks with this name '
                                                                       '(dotted path, comma separation)')
+        parser.add_argument('--list-tasks', action='store_true', help='Only list all tasks')
         parser.add_argument('--exclude', action='store', type=str, help='Exclude the tasks with this name '
                                                                         '(dotted path, comma separation)')
 
     def handle(self, *args, **options):
         verbosity = int(options['verbosity'])
 
+        cache.set("pretix_runperiodic_executed", True, 3600 * 12)
+
         if not periodic_task.receivers or periodic_task.sender_receivers_cache.get(self) is NO_RECEIVERS:
             return
 
         for receiver in periodic_task._live_receivers(self):
             name = f'{receiver.__module__}.{receiver.__name__}'
+            if options['list_tasks']:
+                print(name)
+                continue
             if options.get('tasks'):
                 if name not in options.get('tasks').split(','):
                     continue

@@ -239,7 +239,7 @@ class EventUpdate(DecoupleMixin, EventSettingsViewMixin, EventPermissionRequired
         kwargs = super().get_form_kwargs()
         if self.request.user.has_active_staff_session(self.request.session.session_key):
             kwargs['change_slug'] = True
-            kwargs['domain'] = True
+            # kwargs['domain'] = True
         return kwargs
 
     def post(self, request, *args, **kwargs):
@@ -1348,12 +1348,12 @@ class WidgetSettings(EventSettingsViewMixin, EventPermissionRequiredMixin, FormV
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['urlprefix'] = settings.SITE_URL
-        domain = get_event_domain(self.request.event, fallback=True)
-        if domain:
-            siteurlsplit = urlsplit(settings.SITE_URL)
-            if siteurlsplit.port and siteurlsplit.port not in (80, 443):
-                domain = '%s:%d' % (domain, siteurlsplit.port)
-            ctx['urlprefix'] = '%s://%s' % (siteurlsplit.scheme, domain)
+        # domain = get_event_domain(self.request.event, fallback=True)
+        # if domain:
+        #     siteurlsplit = urlsplit(settings.SITE_URL)
+        #     if siteurlsplit.port and siteurlsplit.port not in (80, 443):
+        #         domain = '%s:%d' % (domain, siteurlsplit.port)
+        #     ctx['urlprefix'] = '%s://%s' % (siteurlsplit.scheme, domain)
         return ctx
 
 
